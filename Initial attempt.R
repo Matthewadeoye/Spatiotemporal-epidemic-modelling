@@ -29,6 +29,7 @@ SimulateMeningococcalData <- function(ndept, time){
     return(r)
   }
   
+  rt<- r_t(156)  # trend component
   
   #Seasonal component (s_t)
   s_t<- function(n){
@@ -54,6 +55,7 @@ SimulateMeningococcalData <- function(ndept, time){
     return(s)
   }
   
+  st<- s_t(156)  #seasonal component
   
   #Markov chain (x_it)
   x_it<- function(num_steps){
@@ -78,7 +80,7 @@ SimulateMeningococcalData <- function(ndept, time){
   
   # Using the trend, seasonal, spatial components and HMM to simulate logLambda_it
   for (i in 1:ndept){
-    logLambda_it.vec <- r_t(time) + s_t(time) + x_it(time)
+    logLambda_it.vec <- rt + st + x_it(time)
     logLambda_it <- c(logLambda_it, logLambda_it.vec)
   }
   
