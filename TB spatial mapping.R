@@ -1,21 +1,8 @@
-#Required packages
-library(fingertipsR)
-library(fingertipscharts)
-require(rgdal)
-library(sp)
-library(sf)
-library(tidyverse)
-library(ggplot2)
-library(maps)
-library(mapdata)
-library(maptools)
-library(rgdal)
-library(ggmap)
-library(rgeos)
-library(broom)
-library(plyr)
-library(dplyr)
-library(viridis)
+#load required packages quitely
+packages<- c("fingertipsR", "fingertipscharts", "sp", "sf", "ggplot2", "viridis", "rgdal", "tidyverse", "maps", "mapdata", "maptools", "mapview", "ggmap", "rgeos", "broom", "plyr", "dplyr", "viridis")
+invisible(lapply(packages, function(pkg) {
+  suppressPackageStartupMessages(require(pkg, character.only = TRUE, quietly = TRUE))
+}))
 
 #Overall Uk TB incidence data
 #inds <- select_indicators()
@@ -36,7 +23,6 @@ indid <- 91361
 indicators()%>% filter(IndicatorID==91361)
 df <- fingertips_data(IndicatorID = indid, AreaTypeID = "All")
 #head(df)
-
 
 #Map
 map_data<- df %>%

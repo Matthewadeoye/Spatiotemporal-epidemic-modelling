@@ -8,10 +8,13 @@ table(measles_cases$loc)
 names(measles_cases)[names(measles_cases) == 'loc'] <- 'city'
 
 
-#UK Measles epidemic
-library(spatPomp)
-library(ggplot2)
+#load required packages quietly
+packages<- c("spatPomp", "fingertipsR", "fingertipscharts", "sp", "sf", "ggplot2", "viridis", "rgdal", "tidyverse", "maps", "mapdata", "maptools", "mapview", "ggmap", "rgeos", "broom", "plyr", "dplyr", "viridis")
+invisible(lapply(packages, function(pkg) {
+  suppressPackageStartupMessages(require(pkg, character.only = TRUE, quietly = TRUE))
+}))
 
+#UK Measles epidemic
 data("measlesUK")
   
 measlesUK<- measlesUK[measlesUK$city ==c("LONDON","BIRMINGHAM","LIVERPOOL","MANCHESTER","LEEDS","SHEFFIELD"),]
@@ -20,25 +23,6 @@ ggplot(measlesUK, aes(x = year, y = log(cases), colour = city)) +
   facet_wrap( ~ city)
 
 measlesUK<- measlesUK[measlesUK$year >=1950,]
-
-#Measles Mapping
-library(fingertipsR)
-library(fingertipscharts)
-require(rgdal)
-library(sp)
-library(sf)
-library(tidyverse)
-library(ggplot2)
-library(maps)
-library(mapdata)
-library(maptools)
-library(rgdal)
-library(ggmap)
-library(rgeos)
-library(broom)
-library(plyr)
-library(dplyr)
-library(viridis)
 
 indid<- 93119
 measles <- fingertips_data(IndicatorID = indid, AreaTypeID = "All")
