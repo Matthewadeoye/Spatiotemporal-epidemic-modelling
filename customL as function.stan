@@ -1,9 +1,23 @@
 functions {
 
   // Intrinsic GMRF density
-    real IGMRF_lpdf(vector u, real kappa, matrix R) {
+    real IGMRF1(vector u, real kappa_u, matrix R) {
     int n = rows(R);
-    return (((kappa / (2.0 * pi()))^((n - 1) / 2.0)) * quad_form(R, u));
+    return (((n - 1) / 2.0) * (log(kappa_u) - log(2.0 * pi())) - (kappa_u / 2.0) * quad_form(R, u));
+  }
+
+  // or
+
+    real IGMRF2(vector u, matrix Q) {
+    int n = rows(Q);
+    vector[n] EVs = eigenvalues_sym(Q);
+    real product_nonzero_EVs = 1.0;
+    for (i in 1:n) {
+    if (EVs[i] >= 0.00000001) {
+      product_nonzero_EVs *= EVs[i];
+    }
+  }
+    return (-(((n - 1) / 2.0) * log(2.0 * pi())) + (0.5 * log(product_nonzero_EVs)) - (0.5 * quad_form(Q, u)));
   }
 
   //Gamma matrix function
@@ -81,23 +95,22 @@ data {
   vector[ndept] u;                    // Spatial component  
   simplex[nstate] init_density;       // initial distribution of the Markov chain
   matrix[ndept, time] e_it;           // initial Susceptibles
-  matrix[ndept, ndept] R;             // Structure matrix
+  matrix[ndept, ndept] R;             // Structure / Precision matrix (IGMRF1/IGMRF2)
 }
-
 
 parameters {
   real<lower=0, upper=1> G12;          // transition to hyperendemic
   real<lower=0, upper=1> G21;          // transition to endemic
-  real<lower=0> kappa;                 // precision parameter
+  real<lower=0> kappa_u;                 // precision parameter
+  // vector[ndept] u;                    // Spatial component 
 }
 
 model {
   // Priors
   G12 ~ beta(1, 1);
   G21 ~ beta(1, 1);
-  kappa ~ gamma(1, 0.01);  
-  u ~ IGMRF(kappa, R);
+  kappa_u ~ gamma(1, 0.01);     
 
   // Likelihood
-  target += Stan_Loglikelihood(y, r, s, u, G(G12, G21), init_density, e_it);
+  target += Stan_Loglikelihood(y, r, s, u, G(G12, G21), init_density, e_it) + IGMRF1(u, kappa_u, R);
 }

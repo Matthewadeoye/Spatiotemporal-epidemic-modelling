@@ -1,4 +1,5 @@
-library(cmdstanr, quietly = T)
+#HMC for G12, G21, and kappa_u
+
 source("Simulation.R")
 
 y<- SimulatedData
@@ -10,8 +11,6 @@ R<- -1*Westmidlands_adjmat
 diag(R)<- -rowSums(R, na.rm = T)
 qr(R)$rank
 
-#model_code <- "C:/Users/Matthew Adeoye/Documents/PhD Statistics/Year 2/Spatiotemporal epidemic modelling/customL.stan"
-
 #model_code <- "C:/Users/Matthew Adeoye/Documents/PhD Statistics/Year 2/Spatiotemporal epidemic modelling/hmm_marginal.stan"
 
 model_code <- "C:/Users/Matthew Adeoye/Documents/PhD Statistics/Year 2/Spatiotemporal epidemic modelling/customL as function.stan"
@@ -19,20 +18,17 @@ model_code <- "C:/Users/Matthew Adeoye/Documents/PhD Statistics/Year 2/Spatiotem
 model <- cmdstan_model(stan_file = model_code, compile = TRUE)
 
 fit <- model$sample(data = list(ndept=ndept, time=time, nstate=nstate, y=y, r=r, s=s, u=u, 
-                    init_density=init_density, e_it=e_it, R=R), thin = 500, adapt_delta = 0.95, 
-                    chains = 4, iter_warmup = 3000, iter_sampling = 2500, parallel_chains = 4) 
-fit$summary()
-mcmc_trace(fit$draws(variables = c("G12", "G21", "kappa")))
-bayesplot::mcmc_scatter(fit$draws(c("G12", "G21", "kappa")), alpha = 0.3)
+                    init_density=init_density, e_it=e_it, R=R), 
+                    chains = 4, iter_warmup = 1000, iter_sampling = 1500, parallel_chains = 4) 
 
+fit$summary()
 bayesplot::color_scheme_set("brightblue")
-bayesplot::mcmc_dens(fit$draws(c("G12", "G21", "kappa")))
+mcmc_trace(fit$draws(variables = c("G12", "G21", "kappa_u")))
+bayesplot::mcmc_dens(fit$draws(c("G12", "G21", "kappa_u")))
 bayesplot::mcmc_scatter(fit$draws(c("G12", "G21")), alpha = 0.3)
 stanfit <- rstan::read_stan_csv(fit$output_files())
 
 #############################################################################################
-
-library(rstan, quietly = T)
 
 expose_stan_functions(stanc(model_code = "functions {
 
@@ -103,14 +99,31 @@ expose_stan_functions(stanc(model_code = "functions {
 
 #G function from Stan
 G(0.2, 0.4)
-
-#Converting data to list
-y_list <- lapply(1:nrow(y), function(i) as.matrix(y[i, , drop = FALSE]))
-
 G_matrix<- G(0.2, 0.4)
+
+#Converting matrix y to lists of matrices
+y_list <- lapply(1:nrow(y), function(i) as.matrix(y[i, , drop = FALSE]))
 
 #Loglikelihood from Stan
 Stan_Loglikelihood(y_list, r, s, u, G_matrix, init_density, e_it) 
 
 #Loglikelihood from R
 loglikelihood(y,r,s,u,G_matrix,init.density,e.it)
+
+
+expose_stan_functions(stanc(model_code = "functions {
+ real hmarginal (matrix logOmega, matrix GammaMatrix, vector InitialDensity){
+ return hmm_marginal(logOmega, GammaMatrix, InitialDensity);
+ }
+}"))
+
+cumHMM<- 0
+for (i in 1:ndept) {
+  AllOmega = matrix(data= NA, nrow=2, ncol=time)
+  for (t in 1:time) {
+    AllOmega[1, t] = dpois(y[i, t], lambda = e_it[i, t] * exp(r[t] + s[t] + u[i] + 0), log=T)
+    AllOmega[2, t] = dpois(y[i, t], lambda = e_it[i, t] * exp(r[t] + s[t] + u[i] + 1), log=T)
+  }
+  cumHMM = cumHMM + hmarginal(AllOmega, G_matrix, init_density)
+}
+cumHMM

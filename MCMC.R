@@ -87,7 +87,7 @@ objective_function <- function(params) {
   
   gammaonetwo<- params[1]
   gammatwoone<- params[2]
-  
+
   if (gammaonetwo>1 || gammaonetwo<0 || gammatwoone>1 || gammatwoone<0 ) return(Inf)
   
   m<- matrix(c(1-gammaonetwo,gammaonetwo,gammatwoone,1-gammatwoone),2,2,byrow=T)
@@ -97,7 +97,6 @@ objective_function <- function(params) {
   return(llhd)
 }
 
-# Perform optimization to estimate model parameters
 initial_params <- c(0.7,0.1)
 
 opt_result <- optim(par = initial_params, fn = objective_function , method = "CG" ,hessian=TRUE)
