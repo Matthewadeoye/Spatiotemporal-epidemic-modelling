@@ -14,6 +14,8 @@ qr(R)$rank
 #x are the components(u), y is the parameter (kappa_u), z is the structure matrix (R)
 logIGMRF1<- function(x, y, z) {
   n = nrow(z)
+  #sumC = sum(x[1:n-1])
+  #xconstrained = c(x, -sumC)
   return ((n - 1)/2 * (log(y) - log(2 * pi)) - y/2 * t(x) %*% z %*% x)
   #return (((n - 1)/2) * (log(y) - log(2 * pi)) - ((y/2) * (t(x) %*% z %*% x)))
 }
@@ -28,7 +30,7 @@ G<- function(G12, G21){
   return(m)
 }
 
-num_iteration<- 5000
+num_iteration<- 1000
 MC_chain<- matrix(rep(NA,num_iteration*3), nrow=num_iteration, ncol=3)
 MC_chain[1,]<- c(runif(1), runif(1), runif(1))
 acceptedG12<- 0
@@ -96,7 +98,7 @@ for(i in 2:num_iteration){
   #proposalproposedkappa - 
   #+ proposalcurrentkappa
   mh.ratiokappa<- exp(likelihoodkappa + priorproposedkappa - likelihoodcurrentk - priorcurrentkappa)
-  print(mh.ratiokappa)
+  #print(mh.ratiokappa)
   if(!is.na(mh.ratiokappa) && runif(1) < mh.ratiokappa){
     MC_chain[i,3]<- proposedkappa
     #likelihoodcurrentk=likelihoodkappa
@@ -117,7 +119,7 @@ hist(MC_chain[500:num_iteration,2], freq=F, xlab = expression(gamma[italic("21")
 abline(v=0.4, col="red", lwd=2,lty=1)
 plot(MC_chain[,2], type = "l", ylab=expression(gamma[italic("21")]), main =bquote("Trace plot for " * bold(gamma[italic("21")])), xlab="MCMC iteration")
 plot(MC_chain[,2],MC_chain[,1],  pch = 16, col = "#00000005", main="Joint posterior", xlab= expression(gamma[italic("21")]), ylab=expression(gamma[italic("12")]))
-hist(MC_chain[500:num_iteration,3], freq=F, xlab = expression(kappa), breaks=35, main =bquote("Marginal posterior for " * bold(kappa)), col = "white", ylab="Density")
+hist(MC_chain[,3], freq=F, xlab = expression(kappa), breaks=35, main =bquote("Marginal posterior for " * bold(kappa)), col = "white", ylab="Density")
 abline(v=kappa_u, col="red", lwd=2,lty=1)
 plot(MC_chain[,3], type = "l", ylab=expression(kappa), main =bquote("Trace plot for " * bold(kappa)), xlab="MCMC iteration")
 
@@ -148,6 +150,36 @@ opt_result <- optim(par = initial_params, fn = objective_function , method = "Ne
 #print(opt_result)
 estimated_params <- opt_result$par
 print(estimated_params)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

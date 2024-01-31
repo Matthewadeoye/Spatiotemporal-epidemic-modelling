@@ -1,5 +1,5 @@
 #HMC for G12, G21, and kappa_u
-
+set.seed(122)
 source("Simulation.R")
 
 y<- SimulatedData
@@ -17,11 +17,21 @@ model_code <- "C:/Users/Matthew Adeoye/Documents/PhD Statistics/Year 2/Spatiotem
 
 model <- cmdstan_model(stan_file = model_code, compile = TRUE)
 
-fit <- model$sample(data = list(ndept=ndept, time=time, nstate=nstate, y=y, r=r, s=s, u=u, 
-                    init_density=init_density, e_it=e_it, R=R), 
-                    chains = 4, iter_warmup = 1000, iter_sampling = 1500, parallel_chains = 4) 
+initials <- list(G12 = 0.1, G21 = 0.3, u = c(rep(0, ndept)))
+
+fit <- model$sample(data = list(ndept=ndept, time=time, nstate=nstate, y=y, r=r, s=s, 
+                    init_density=init_density, e_it=e_it, R=R), init = list(initials, initials, initials, initials), 
+                    chains = 4, iter_warmup = 1000, iter_sampling = 1500, parallel_chains = 4, set.seed(1234)) 
 
 fit$summary()
+StanUs<- fit$draws(variables = "uconstrained")
+vs<- as.numeric(StanUs[1000,1,])
+vs
+u
+sum(vs)
+sum(u)
+mcmc_trace(fit$draws(variables = "uconstrained"))
+
 bayesplot::color_scheme_set("brightblue")
 mcmc_trace(fit$draws(variables = c("G12", "G21", "kappa_u")))
 bayesplot::mcmc_dens(fit$draws(c("G12", "G21", "kappa_u")))

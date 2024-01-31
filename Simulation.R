@@ -1,7 +1,7 @@
 # Space  ==> i=1,...,I.
 # Time  ==> t=1,...,T.
 
-packages<- c("ar.matrix","sp", "sf", "mapview", "spdep", "ggplot2", "gganimate","gifski", "transformr", "viridis", "rgdal", "tidyverse", "cmdstanr", "rstan", "bayesplot", "posterior")
+packages<- c("ar.matrix","sp", "sf", "mapview", "spdep", "ggplot2", "gganimate","gifski", "transformr", "viridis", "rgdal", "tidyverse", "cmdstanr", "rstan", "bayesplot", "posterior", "mvtnorm")
 invisible(lapply(packages, function(pkg) {
   suppressPackageStartupMessages(require(pkg, character.only = TRUE, quietly = TRUE))
 }))

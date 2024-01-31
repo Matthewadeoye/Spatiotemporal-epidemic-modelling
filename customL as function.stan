@@ -1,9 +1,9 @@
 functions {
 
   // Intrinsic GMRF density
-    real IGMRF1(vector u, real kappa_u, matrix R) {
+    real IGMRF1_lpdf(vector uconstrained, real kappa_u, matrix R) {    
     int n = rows(R);
-    return (((n - 1) / 2.0) * (log(kappa_u) - log(2.0 * pi())) - (kappa_u / 2.0) * quad_form(R, u));
+    return (((n - 1) / 2.0) * (log(kappa_u) - log(2.0 * pi())) - (kappa_u / 2.0) * quad_form(R, uconstrained));
   }
 
   // or
@@ -92,7 +92,7 @@ data {
   array[ndept, time] int y;           // data matrix
   vector[time] r;                     // Trend component
   vector[time] s;                     // Seasonal component
-  vector[ndept] u;                    // Spatial component  
+  // vector[ndept] u;                    // Spatial component  
   simplex[nstate] init_density;       // initial distribution of the Markov chain
   matrix[ndept, time] e_it;           // initial Susceptibles
   matrix[ndept, ndept] R;             // Structure / Precision matrix (IGMRF1/IGMRF2)
@@ -102,7 +102,13 @@ parameters {
   real<lower=0, upper=1> G12;          // transition to hyperendemic
   real<lower=0, upper=1> G21;          // transition to endemic
   real<lower=0> kappa_u;                 // precision parameter
-  // vector[ndept] u;                    // Spatial component 
+  vector[ndept] u;                    // Spatial components 
+}
+
+transformed parameters {
+    real sumC = sum(u[1:ndept-1]);
+    vector[ndept] uconstrained;
+    uconstrained = append_row(u[1:ndept-1], -sumC);
 }
 
 model {
@@ -110,7 +116,8 @@ model {
   G12 ~ beta(1, 1);
   G21 ~ beta(1, 1);
   kappa_u ~ gamma(1, 0.01);     
-
+  uconstrained ~ IGMRF1(kappa_u, R); 
+ 
   // Likelihood
-  target += Stan_Loglikelihood(y, r, s, u, G(G12, G21), init_density, e_it) + IGMRF1(u, kappa_u, R);
+  target += Stan_Loglikelihood(y, r, s, uconstrained, G(G12, G21), init_density, e_it);
 }
