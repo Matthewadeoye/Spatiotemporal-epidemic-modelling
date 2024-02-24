@@ -1,8 +1,13 @@
 #HMC for G12, G21, and kappa_u
-set.seed(122)
+set.seed(1223)
+#set.seed(1234)
+#set.seed(189)
+#set.seed(6112)
 source("Simulation.R")
 
 y<- SimulatedData
+plot(1:time, y[10,], type="l")
+y
 init_density<- c(0.4, 0.6)
 ndept<- 30
 nstate<- 2
@@ -17,22 +22,30 @@ model_code <- "C:/Users/Matthew Adeoye/Documents/PhD Statistics/Year 2/Spatiotem
 
 model <- cmdstan_model(stan_file = model_code, compile = TRUE)
 
-initials <- list(G12 = 0.1, G21 = 0.3, u = c(rep(0, ndept)))
+initials <- list(G12 = 0.1, G21 = 0.3, u = rep(0, ndept-1), r = rep(0, time), kappa_u=20, kappa_r=20) 
 
-fit <- model$sample(data = list(ndept=ndept, time=time, nstate=nstate, y=y, r=r, s=s, 
+fit <- model$sample(data = list(ndept=ndept, time=time, nstate=nstate, y=y, s=s,
                     init_density=init_density, e_it=e_it, R=R), init = list(initials, initials, initials, initials), 
-                    chains = 4, iter_warmup = 1000, iter_sampling = 1500, parallel_chains = 4, set.seed(1234)) 
+                    chains = 4, iter_warmup = 500, iter_sampling = 1500, parallel_chains = 4, set.seed(1234)) 
 
 fit$summary()
+bayesplot::color_scheme_set("red")
 StanUs<- fit$draws(variables = "uconstrained")
-vs<- as.numeric(StanUs[1000,1,])
-vs
-u
-sum(vs)
-sum(u)
+#vs<- as.numeric(StanUs[1000,1,])
+#vs
+#u
+#sum(vs)
+#sum(u)
 mcmc_trace(fit$draws(variables = "uconstrained"))
+mcmc_trace(fit$draws(variables = "r"))
+#mcmc_trace(fit$draws(variables = "s"))
 
-bayesplot::color_scheme_set("brightblue")
+stanfit <- rstan::read_stan_csv(fit$output_files())
+stanfit<- as.matrix(stanfit)
+mcmc_recover_hist(stanfit[, 34:93], r)
+mcmc_recover_hist(stanfit[, 95:124], u)
+mcmc_recover_hist(stanfit[, 1:2], c(0.2,0.4))
+
 mcmc_trace(fit$draws(variables = c("G12", "G21", "kappa_u")))
 bayesplot::mcmc_dens(fit$draws(c("G12", "G21", "kappa_u")))
 bayesplot::mcmc_scatter(fit$draws(c("G12", "G21")), alpha = 0.3)

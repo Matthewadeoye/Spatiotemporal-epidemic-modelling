@@ -2,12 +2,13 @@
 
 r <- numeric(time)
 
+#kappa_r<- 10541.45
 kappa_r<- rgamma(1,10,0.001)
 sigma_r <- sqrt(1/kappa_r)
 
 # initial values
-r[1] <- runif(1)
-r[2] <- r[1]
+r[1] <- 0
+r[2] <- 0
 
 for (t in 3:time) {
   epsilon <- rnorm(1, mean = 0, sd = sigma_r)  
@@ -18,6 +19,7 @@ for (t in 3:time) {
 
 s <- numeric(time)
 
+#kappa_s<- 1182.576
 kappa_s<- rgamma(1,10,0.009)
 sigma_s <- sqrt(1/kappa_s)
 
@@ -37,6 +39,8 @@ library(ar.matrix)
 
 Q<- Westmidlands_adjmat
 Q<- -1*Q
+
+#kappa_u<- 15.54777
 kappa_u<- rgamma(1,10,0.5)
 sigma<- 1/sqrt(kappa_u)
 

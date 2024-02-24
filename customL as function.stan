@@ -20,6 +20,26 @@ functions {
     return (-(((n - 1) / 2.0) * log(2.0 * pi())) + (0.5 * log(product_nonzero_EVs)) - (0.5 * quad_form(Q, u)));
   }
 
+  // Random walk density
+    real randomwalk2_lpdf(vector r, real kappa_r) { 
+    int time = dims(r)[1];  
+    real res = 0;
+    for (i in 3:time) {
+    res += (r[i-2] - 2 * r[i-1] + r[i])^2;
+  }
+    return ((- kappa_r / 2.0) * res);   
+}
+
+ // Seasonal components' density
+    real seasonalComp_lpdf(vector s, real kappa_s) { 
+    int time = dims(s)[1];  
+    real res = 0;
+    for (i in 12:time) {
+    res += (s[i-11] + s[i-10] + s[i-9] + s[i-8] + s[i-7] + s[i-6] + s[i-5] + s[i-4] + s[i-3] + s[i-2] + s[i-1] + s[i])^2;
+  }
+    return ((- kappa_s / 2.0) * res);   
+}
+
   //Gamma matrix function
   
     matrix G(real G12, real G21) {
@@ -90,34 +110,43 @@ data {
   int<lower=1> time;                  // Time
   int<lower=1> nstate;                // Number of states
   array[ndept, time] int y;           // data matrix
-  vector[time] r;                     // Trend component
-  vector[time] s;                     // Seasonal component
-  // vector[ndept] u;                    // Spatial component  
+ // vector[time] r;                  // Trend component
+  vector[time] s;                  // Seasonal component
+  //vector[ndept] u;                 // Spatial component  
   simplex[nstate] init_density;       // initial distribution of the Markov chain
   matrix[ndept, time] e_it;           // initial Susceptibles
   matrix[ndept, ndept] R;             // Structure / Precision matrix (IGMRF1/IGMRF2)
 }
 
 parameters {
-  real<lower=0, upper=1> G12;          // transition to hyperendemic
-  real<lower=0, upper=1> G21;          // transition to endemic
-  real<lower=0> kappa_u;                 // precision parameter
-  vector[ndept] u;                    // Spatial components 
+  real<lower=0, upper=1> G12;            // transition to hyperendemic
+  real<lower=0, upper=1> G21;            // transition to endemic
+  real<lower=0> kappa_u;                 // spatial precision parameter
+  real<lower=0> kappa_r;                 // trend precision parameter
+//  real<lower=0> kappa_s;                 // seasonal precision parameter
+  vector[ndept-1] u;                     // Spatial components
+  vector[time] r;                        // Trend components
+//  vector[time] s;                        // Seasonal components
 }
 
 transformed parameters {
-    real sumC = sum(u[1:ndept-1]);
+    real sumC = sum(u[1:(ndept-1)]);
     vector[ndept] uconstrained;
-    uconstrained = append_row(u[1:ndept-1], -sumC);
+    uconstrained = append_row(u[1:(ndept-1)], -sumC);
 }
 
 model {
   // Priors
   G12 ~ beta(1, 1);
   G21 ~ beta(1, 1);
-  kappa_u ~ gamma(1, 0.01);     
+  kappa_u ~ gamma(1, 0.01);
+  kappa_r ~ gamma(1, 0.0001);  
+//  kappa_s ~ gamma(1, 0.0001);
+   
   uconstrained ~ IGMRF1(kappa_u, R); 
- 
+  r ~ randomwalk2(kappa_r); 
+//  s ~ seasonalComp(kappa_s);
+
   // Likelihood
   target += Stan_Loglikelihood(y, r, s, uconstrained, G(G12, G21), init_density, e_it);
 }
