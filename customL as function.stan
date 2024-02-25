@@ -35,7 +35,7 @@ functions {
     int time = dims(s)[1];  
     real res = 0;
     for (i in 12:time) {
-    res += (s[i-11] + s[i-10] + s[i-9] + s[i-8] + s[i-7] + s[i-6] + s[i-5] + s[i-4] + s[i-3] + s[i-2] + s[i-1] + s[i])^2;
+    res += (sum(s[(i-0):(i-11)]))^2;
   }
     return ((- kappa_s / 2.0) * res);   
 }
@@ -141,7 +141,7 @@ model {
   G21 ~ beta(1, 1);
   kappa_u ~ gamma(1, 0.01);
   kappa_r ~ gamma(1, 0.0001);  
-//  kappa_s ~ gamma(1, 0.0001);
+ // kappa_s ~ gamma(1, 0.0001);
    
   uconstrained ~ IGMRF1(kappa_u, R); 
   r ~ randomwalk2(kappa_r); 

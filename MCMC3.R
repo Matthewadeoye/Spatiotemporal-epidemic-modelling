@@ -25,7 +25,7 @@ seasonalComp<- function(x, z){
   time<- length(x)
   Sumres<- 0
   for(i in 12:time){
-    res<- (x[i-11] + x[i-10] + x[i-9] + x[i-8] + x[i-7] + x[i-6] + x[i-5] + x[i-4] + x[i-3] + x[i-2] + x[i-1] + x[i])^2
+    res<- (sum(x[(i-0):(i-11)]))^2
     Sumres<- Sumres + res
   }
   return((-z/2) * Sumres)
