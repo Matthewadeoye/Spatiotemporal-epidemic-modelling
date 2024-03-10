@@ -11,14 +11,14 @@ diag(R)<- -rowSums(R, na.rm = T)
 qr(R)$rank
 
 #Prior density for Trend components (r_t)
-randomwalk2<- function(x, z){
-  time<- length(x)
+randomwalk2<- function(componentR, PrecisionR){
+  time<- length(componentR)
   Sumres<- 0
   for(i in 3:time){
-    res<- (x[i-2] - 2 * x[i-1] + x[i])^2
+    res<- (componentR[i-2] - (2 * componentR[i-1]) + componentR[i])^2
     Sumres<- Sumres + res
   }
-  return((-z/2) * Sumres)
+  return((time - 2)/2 * (log(PrecisionR) - log(2 * pi)) -PrecisionR/2 * Sumres)
 }
 
 #Prior density for Seasonal components (s_t)
@@ -26,10 +26,10 @@ seasonalComp<- function(x, z){
   time<- length(x)
   Sumres<- 0
   for(i in 12:time){
-    res<- (sum(x[(i-0):(i-11)]))^2
+    res<- (sum(x[(i-11):(i-0)]))^2
     Sumres<- Sumres + res
   }
-  return((-z/2) * Sumres)
+  return((time - 11)/2 * (log(z) - log(2 * pi)) -z/2 * Sumres)
 }
 
 #Intrinsic GMRF density for spatial components (u_i)

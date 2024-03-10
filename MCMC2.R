@@ -4,6 +4,7 @@ source("Simulation.R")
 source("loglikelihood.R")
 
 init.density<- c(0.4, 0.6)
+stationary_distribution<- c(0.6666667, 0.3333333)
 e.it<- 1000
 
 #Intrinsic GMRF density

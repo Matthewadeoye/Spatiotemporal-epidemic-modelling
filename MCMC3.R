@@ -4,6 +4,7 @@ source("Simulation.R")
 source("loglikelihood.R")
 
 init.density<- c(0.4, 0.6)
+stationary_distribution<- c(0.6666667, 0.3333333)
 e.it<- 1000
 R<- -1*Westmidlands_adjmat
 diag(R)<- -rowSums(R, na.rm = T)
@@ -45,7 +46,7 @@ G<- function(G12, G21){
   return(m)
 }
 
-num_iteration<- 10000
+num_iteration<- 5000
 MC_chain<- matrix(rep(NA,num_iteration*32), nrow=num_iteration, ncol=32)
 MC_chain[1,]<- c(runif(1), runif(1), c(rep(0, ndept)))
 acceptedG12<- 0
@@ -166,14 +167,14 @@ TrueValues<- c(0.2, 0.4, u)
 #Histograms
 par(mfrow=c(3, 3))  
 for (i in 1:ncol(data_df)) {
-  hist(data_df[-(1:3000), i], main = colnames(data_df)[i], xlab ="", col = "white", border = "black")
+  hist(data_df[-(1:2000), i], main = colnames(data_df)[i], xlab ="", col = "white", border = "black")
   abline(v=TrueValues[i], col="red", lwd=2,lty=1)
 }
 
 #Traceplots
 par(mfrow=c(3, 3))  
 for (i in 1:ncol(data_df)) {
-  plot(data_df[, i], type = "l", main = colnames(data_df)[i], xlab ="MCMC iterations", ylab = "", col = "red")
-  abline(h=TrueValues[i], col="black", lwd=2,lty=1)
+  plot(data_df[, i], type = "l", main = colnames(data_df)[i], xlab ="MCMC iterations", ylab = "", col = "purple")
+  abline(h=TrueValues[i], col="red", lwd=2,lty=1)
 }
 

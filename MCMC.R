@@ -4,6 +4,7 @@ source("Simulation.R")
 source("loglikelihood.R")
 
 init.density<- c(0.4, 0.6)
+stationary_distribution<- c(0.6666667, 0.3333333)
 e.it<- 1000
 
 #Function for transition probability matrix
@@ -104,3 +105,19 @@ opt_result <- optim(par = initial_params, fn = objective_function , method = "CG
 estimated_params <- opt_result$par
 print(estimated_params)
 
+
+
+#stationary distribution
+TPM <- G(0.2, 0.4)
+
+eigen_decomp <- eigen(t(TPM))
+eigenvalues <- eigen_decomp$values
+eigenvectors <- eigen_decomp$vectors
+
+index <- which(abs(eigenvalues - 1) < 1e-8)
+
+stationary_distribution <- eigenvectors[, index]
+
+stationary_distribution <- stationary_distribution / sum(stationary_distribution)
+
+stationary_distribution

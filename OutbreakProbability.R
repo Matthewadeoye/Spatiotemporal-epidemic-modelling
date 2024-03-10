@@ -50,7 +50,7 @@ forwardfilter <- function(y,r,s,u,Gamma,init.density,e.it) {
 #BACKWARD SWEEP
 #################################################################################################
 
-backwardsweep <- function(y,r,s,u,Gamma,init.density,e.it) {
+backwardsweep <- function(y,r,s,u,Gamma,e.it) {
   ndept <- nrow(y)  
   nstate <- ncol(Gamma)  
   time <- ncol(y)  
@@ -58,8 +58,7 @@ backwardsweep <- function(y,r,s,u,Gamma,init.density,e.it) {
   gamma_12 <- log(Gamma[1, 2])
   gamma_21 <- log(Gamma[2, 1])
   gamma_22 <- log(Gamma[2, 2])
-  init.density<- log(init.density)
-  
+
 overallbackwardprob<- matrix(0, nrow = ndept, ncol = time)
   
   for (i in 1:ndept) {
