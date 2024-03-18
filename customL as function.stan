@@ -27,7 +27,7 @@ functions {
     for (i in 3:time) {
     res += (r[i-2] - 2 * r[i-1] + r[i])^2;
   }
-    return ((- kappa_r / 2.0) * res);   
+    return (((time - 2) / 2.0) * log(kappa_r) - (kappa_r / 2.0) * res);   
 }
 
  // Seasonal components' density
@@ -35,9 +35,9 @@ functions {
     int time = dims(s)[1];  
     real res = 0;
     for (i in 12:time) {
-    res += (sum(s[(i-0):(i-11)]))^2;
+    res += (sum(s[(i-11):(i-0)]))^2;
   }
-    return ((- kappa_s / 2.0) * res);   
+    return (((time - 11) / 2.0) * log(kappa_s) - (kappa_s / 2.0) * res);   
 }
 
   //Gamma matrix function
@@ -111,7 +111,7 @@ data {
   int<lower=1> nstate;                // Number of states
   array[ndept, time] int y;           // data matrix
  // vector[time] r;                  // Trend component
-  vector[time] s;                  // Seasonal component
+ // vector[time] s;                  // Seasonal component
   //vector[ndept] u;                 // Spatial component  
   simplex[nstate] init_density;       // initial distribution of the Markov chain
   matrix[ndept, time] e_it;           // initial Susceptibles
@@ -123,10 +123,10 @@ parameters {
   real<lower=0, upper=1> G21;            // transition to endemic
   real<lower=0> kappa_u;                 // spatial precision parameter
   real<lower=0> kappa_r;                 // trend precision parameter
-//  real<lower=0> kappa_s;                 // seasonal precision parameter
+  real<lower=0> kappa_s;                 // seasonal precision parameter
   vector[ndept-1] u;                     // Spatial components
   vector[time] r;                        // Trend components
-//  vector[time] s;                        // Seasonal components
+  vector[time] s;                        // Seasonal components
 }
 
 transformed parameters {
@@ -141,11 +141,11 @@ model {
   G21 ~ beta(1, 1);
   kappa_u ~ gamma(1, 0.01);
   kappa_r ~ gamma(1, 0.0001);  
- // kappa_s ~ gamma(1, 0.0001);
-   
-  uconstrained ~ IGMRF1(kappa_u, R); 
-  r ~ randomwalk2(kappa_r); 
-//  s ~ seasonalComp(kappa_s);
+  kappa_s ~ gamma(1, 0.0001);
+  
+  uconstrained ~ IGMRF1(kappa_u, R);
+  r ~ randomwalk2(kappa_r);
+  s ~ seasonalComp(kappa_s);
 
   // Likelihood
   target += Stan_Loglikelihood(y, r, s, uconstrained, G(G12, G21), init_density, e_it);

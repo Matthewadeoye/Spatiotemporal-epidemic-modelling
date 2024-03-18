@@ -1,8 +1,9 @@
-#MCMC for Gamma_12, Gamma_21, and U's
+#MCMC for all components excluding seasonality (s_t)
 set.seed(122)
 source("Simulation.R")
 source("loglikelihood.R")
 
+SimulatedData<- SimulationResults[[1]]
 init.density<- c(0.6666667, 0.3333333)
 e.it<- 1000
 R<- -1*Westmidlands_adjmat
@@ -40,7 +41,6 @@ MC_chain[1,]<- c(runif(1), runif(1), kappa_r, kappa_u, r, u)
 accepted<- 0
 likelihoodcurrent<- loglikelihood(SimulatedData,MC_chain[1,5:64],s,MC_chain[1,65:94],G(MC_chain[1,1],MC_chain[1,2]),init.density,e.it)
 zigmaR<- diag(rep(0.0000008, time), nrow = time, ncol = time)
-zigmaS<- diag(rep(0.0000008, time), nrow = time, ncol = time)
 zigmaU<- diag(rep(0.0001, ndept-1), nrow=ndept-1, ncol=ndept-1)
 optconstantRS<- 2.38^2/time
 optconstantU<- 2.38^2/(ndept-1)

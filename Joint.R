@@ -1,8 +1,9 @@
-#MCMC for Gamma_12, Gamma_21, and U's
+#MCMC for Gamma_12, Gamma_21, and spatial component (u_i)
 set.seed(122)
 source("Simulation.R")
 source("loglikelihood.R")
 
+SimulatedData<- SimulationResults[[1]]
 init.density<- c(0.4, 0.6)
 stationary_distribution<- c(0.6666667, 0.3333333)
 e.it<- 1000

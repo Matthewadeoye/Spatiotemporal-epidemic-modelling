@@ -1,6 +1,4 @@
-#logLikelihood Computation via forward filtering
-
-require(matrixStats, quietly = TRUE)
+#logLikelihood via forward filtering
 
 loglikelihood <- function(y,r,s,u,Gamma,init.density,e.it) {
   ndept <- nrow(y)  

@@ -1,14 +1,4 @@
-set.seed(122)
-source("Simulation.R")
-init.density<- c(0.4, 0.6)
-stationary_distribution<- c(0.6666667, 0.3333333)
-e.it<- 1000
-
-#Function for transition probability matrix
-G<- function(G12, G21){
-  m<- matrix(c(1-G12,G12,G21,1-G21),2,2,byrow=T)
-  return(m)
-}
+#Computing the probabilities of epidemic outbreak
 
 #################################################################################################
 #FORWARD FILTER

@@ -1,8 +1,9 @@
-#MCMC for trend components
+#MCMC for trend components (r_t)
 set.seed(122)
 source("Simulation.R")
 source("loglikelihood.R")
 
+SimulatedData<- SimulationResults[[1]]
 init.density<- c(0.6666667, 0.3333333)
 e.it<- 1000
 
@@ -23,8 +24,8 @@ G<- function(G12, G21){
   return(m)
 }
 
-num_iteration<- 30000
-MC_chain<- matrix(NA, nrow=(num_iteration), ncol=time)
+num_iteration<- 15000
+MC_chain<- matrix(NA, nrow=num_iteration, ncol=time)
 MC_chain[1,]<- rep(0, time)
 ACCEPTED<- 0
 likelihoodcurrent<- loglikelihood(SimulatedData,MC_chain[1, 1:60],s,u,G(0.2, 0.4),init.density,e.it)
@@ -54,24 +55,24 @@ for(i in 2:num_iteration){
         ACCEPTED<- ACCEPTED + 0
       }
       #Adapting zigma
-      if(i==30){
-        epsilon<- 0.009
+      if(i==500){
+        epsilon<- 0.06
         Xn<- MC_chain[1:i, 1:60]
         Xnbar <- colMeans(Xn) 
         zigma <- cov(Xn) + epsilon*diag(rep(1, time))
         zigma<- optconstant * zigma
-      } else if (i > 30){ 
+      } else if (i > 500){ 
         XnbarPrev <- Xnbar
         Xnbar <- (i*Xnbar + MC_chain[i, 1:60])/(i+1)
         zigma <- ((i-1)*zigma + tcrossprod(MC_chain[i, 1:60]) + i*tcrossprod(XnbarPrev) - (i+1)*tcrossprod(Xnbar) + epsilon*diag(rep(1,time)))/i
         zigma<- optconstant * zigma
-        print(zigma)
+        #print(zigma)
       }   
 }
 
 RsMCMC<- numeric(time)
 for(i in 1:time){
-  RsMCMC[i] = mean(MC_chain[-(1:20000), i])
+  RsMCMC[i] = mean(MC_chain[-(1:10000), i])
 }
 RsMCMC
 r
@@ -84,7 +85,7 @@ TrueValues<- r
 #Histograms
 par(mfrow=c(3, 3))  
 for (i in 1:ncol(data_df)) {
-  hist(data_df[-(1:20000), i], main = colnames(data_df)[i], xlab ="", col = "white", border = "black")
+  hist(data_df[-(1:10000), i], main = colnames(data_df)[i], xlab ="", col = "white", border = "black")
   abline(v=TrueValues[i], col="red", lwd=2,lty=1)
 }
 

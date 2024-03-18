@@ -3,6 +3,7 @@
 source("Simulation.R")
 source("loglikelihood.R")
 
+SimulatedData<- SimulationResults[[1]]
 init.density<- c(0.4, 0.6)
 stationary_distribution<- c(0.6666667, 0.3333333)
 e.it<- 1000
@@ -15,10 +16,7 @@ qr(R)$rank
 #x are the components(u), y is the parameter (kappa_u), z is the structure matrix (R)
 logIGMRF1<- function(x, y, z) {
   n = nrow(z)
-  #sumC = sum(x[1:n-1])
-  #xconstrained = c(x, -sumC)
   return ((n - 1)/2 * (log(y) - log(2 * pi)) - y/2 * t(x) %*% z %*% x)
-  #return (((n - 1)/2) * (log(y) - log(2 * pi)) - ((y/2) * (t(x) %*% z %*% x)))
 }
 
 ku<- seq(0, 50, by=0.05)

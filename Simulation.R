@@ -1,7 +1,7 @@
 # Space  ==> i=1,...,I.
 # Time  ==> t=1,...,T.
 
-packages<- c("ar.matrix","sp", "sf", "mapview", "spdep", "ggplot2", "gganimate","gifski", "transformr", "viridis", "rgdal", "tidyverse", "cmdstanr", "rstan", "bayesplot", "posterior", "mvtnorm")
+packages<- c("ar.matrix","sp", "sf", "mapview", "spdep", "ggplot2", "gganimate","gifski", "transformr", "viridis", "rgdal", "tidyverse", "cmdstanr", "rstan", "bayesplot", "posterior", "mvtnorm", "matrixStats")
 invisible(lapply(packages, function(pkg) {
   suppressPackageStartupMessages(require(pkg, character.only = TRUE, quietly = TRUE))
 }))
@@ -14,7 +14,7 @@ Westmidlands_adjmat <- nb2mat(poly2nb(Westmidlands.shp), style = "B", zero.polic
 
 time<- 60
 ndept<- length(diag(Westmidlands_adjmat))
-  
+
 source("Components.R")
 
 SimulateMeningococcalData <- function(adj.matrix, time, e_it=matrix(1000,length(diag(adj.matrix)),time)){
@@ -42,8 +42,10 @@ SimulateMeningococcalData <- function(adj.matrix, time, e_it=matrix(1000,length(
   
   # Using the trend and seasonal components and Markov chain to simulate logLambda_it
   logLambda_it<- matrix(NA, ndept, time)
+  EpidemicIndicator<- matrix(NA, ndept, time)
   for (i in 1:ndept){
-    logLambda_it[i,] <- r + s + x_it(time)
+    EpidemicIndicator[i,]<- x_it(time)
+    logLambda_it[i,] <- r + s + EpidemicIndicator[i,]
   }
   
   #Add spatial component (u_i)
@@ -51,7 +53,7 @@ SimulateMeningococcalData <- function(adj.matrix, time, e_it=matrix(1000,length(
   
   y_it= matrix(rpois(ndept*time,e_it*exp(logLambda_it)),ndept,time)
   
-  return(y_it)
+  return(list(y_it, EpidemicIndicator))
 }
 
-SimulatedData<- SimulateMeningococcalData(adj.matrix=Westmidlands_adjmat, time=time)
+SimulationResults<- SimulateMeningococcalData(adj.matrix=Westmidlands_adjmat, time=time)

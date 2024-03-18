@@ -1,8 +1,9 @@
-#MCMC for Gamma_12, Gamma_21, and U's
+#MCMC for trend components using block updates
 set.seed(122)
 source("Simulation.R")
 source("loglikelihood.R")
 
+SimulatedData<- SimulationResults[[1]]
 init.density<- c(0.6666667, 0.3333333)
 e.it<- 1000
 RW2PrecMat<- matrix(0, nrow=60, ncol=60)
@@ -14,7 +15,7 @@ RW2PrecMat[60,(58:60)]<- c(1,-2,1)
 for(i in 3:(time-3)){
   RW2PrecMat[i+1, ((i-1):(i+3))]<- c(1,-4,6,-4,1)
 }
-RW2PrecMat<- (1/kappa_r)*RW2PrecMat
+RW2PrecMat<- kappa_r * RW2PrecMat
 
 #Prior density for Trend components (r_t)
 randomwalk2<- function(componentR, PrecisionR){
@@ -24,7 +25,7 @@ randomwalk2<- function(componentR, PrecisionR){
     res<- (componentR[i-2] - (2 * componentR[i-1]) + componentR[i])^2
     Sumres<- Sumres + res
   }
-  return((time - 2)/2 * (log(PrecisionR) - log(2 * pi)) -PrecisionR/2 * Sumres)
+  return((time - 2)/2 * log(PrecisionR) - PrecisionR/2 * Sumres)
 }
 
 #Function for transition probability matrix

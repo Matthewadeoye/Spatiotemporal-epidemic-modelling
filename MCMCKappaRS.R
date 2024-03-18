@@ -1,8 +1,9 @@
-#MCMC for Gamma_12, Gamma_21, and kappa_r
+#MCMC for Gamma_12, Gamma_21, kappa_r and kappa_s
 
 source("Simulation.R")
 source("loglikelihood.R")
 
+SimulatedData<- SimulationResults[[1]]
 init.density<- c(0.4, 0.6)
 e.it<- 1000
 
@@ -14,7 +15,7 @@ randomwalk2<- function(componentR, PrecisionR){
     res<- (componentR[i-2] - (2 * componentR[i-1]) + componentR[i])^2
     Sumres<- Sumres + res
   }
-  return((time - 2)/2 * (log(PrecisionR) - log(2 * pi)) -PrecisionR/2 * Sumres)
+  return((time - 2)/2 * log(PrecisionR) - PrecisionR/2 * Sumres)
 }
 
 kr<- seq(0, 50000, by=0.05)
@@ -29,7 +30,7 @@ seasonalComp<- function(x, z){
     res<- (sum(x[(i-11):(i-0)]))^2
     Sumres<- Sumres + res
   }
-  return((time - 11)/2 * (log(z) - log(2 * pi)) -z/2 * Sumres)
+  return((time - 11)/2 * log(z) - z/2 * Sumres)
 }
 
 ks<- seq(0, 5000, by=0.5)
@@ -43,7 +44,7 @@ G<- function(G12, G21){
 }
 
 num_iteration<- 3000
-MC_chain<- matrix(rep(NA,num_iteration*3), nrow=num_iteration, ncol=4)
+MC_chain<- matrix(NA, nrow=num_iteration, ncol=4)
 MC_chain[1,]<- c(runif(1), runif(1), 0, 0)
 acceptedG12<- 0
 acceptedG21<- 0
