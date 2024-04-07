@@ -421,7 +421,7 @@ functions {
     alpha[1, 1] = log(init_density[1]) + poisson_lpmf(y[i, 1] | e_it[i, 1] * exp(r[1] + s[1] + u[i] + 0));
     alpha[1, 2] = 0;
     beta[1, 1] = 0;
-    beta[1, 2] = log(init_density[2]) + poisson_lpmf(y[i, 1] | e_it[i, 1] * exp(r[1] + s[1] + u[i] + B[1] * log(0 + 1) + B[2] * z_it[i, 1] + 1));
+    beta[1, 2] = log(init_density[2]) + poisson_lpmf(y[i, 1] | e_it[i, 1] * exp(r[1] + s[1] + u[i] + B[1] * log(0 + 1) + B[2] * (z_it[i, 1] + 1)));
     
     Alphas[1, 1] = alpha[1, 1];
     Alphas[1, 2] = beta[1, 2];    
@@ -431,8 +431,8 @@ functions {
 
          alpha[t, 1] = Alphas[t-1, 1] + log(gamma[1, 1]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 0));
          alpha[t, 2] = Alphas[t-1, 2] + log(gamma[2, 1]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 0));
-         beta[t, 1] =  Alphas[t-1, 1] + log(gamma[1, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + B[1] * log(y[i, t-1] + 1) + B[2] * z_it[i, t] + 1));
-         beta[t, 2] =  Alphas[t-1, 2] + log(gamma[2, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + B[1] * log(y[i, t-1] + 1) + B[2] * z_it[i, t] + 1));
+         beta[t, 1] =  Alphas[t-1, 1] + log(gamma[1, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + B[1] * log(y[i, t-1] + 1) + B[2] * (z_it[i, t] + 1)));
+         beta[t, 2] =  Alphas[t-1, 2] + log(gamma[2, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + B[1] * log(y[i, t-1] + 1) + B[2] * (z_it[i, t] + 1)));
          Alphas[t, 1] = log_sum_exp(alpha[t,]);
          Alphas[t, 2] = log_sum_exp(beta[t,]);
 }

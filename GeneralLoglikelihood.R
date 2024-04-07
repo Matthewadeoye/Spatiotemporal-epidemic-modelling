@@ -228,12 +228,12 @@ GeneralLoglikelihood <- function(y,r,s,u,Gamma,init.density,e.it,B,model,adjacen
       
       for (i in 1:ndept) {
         alpha.1 <- init.density[1] + dpois(y[i, 1], lambda = e.it * exp(r[1] + s[1] + u[i]), log = TRUE)
-        alpha.2 <- init.density[2] + dpois(y[i, 1], lambda = e.it * exp(r[1] + s[1] + u[i] + B[1] * log(0 + 1) + B[2] * z.it[i, 1] + 1), log = TRUE)
+        alpha.2 <- init.density[2] + dpois(y[i, 1], lambda = e.it * exp(r[1] + s[1] + u[i] + B[1] * log(0 + 1) + B[2] * (z.it[i, 1] + 1)), log = TRUE)
         
         for (t in 2:time) {
           Alphas<- c(alpha.1, alpha.2)
           alpha.1 <- logSumExp(c(Alphas[1] + gamma_11 + dpois(y[i, t], lambda = e.it * exp(r[t] + s[t] + u[i]), log = TRUE), Alphas[2] + gamma_21 + dpois(y[i, t], lambda = e.it * exp(r[t] + s[t] + u[i]), log = TRUE)))
-          alpha.2 <- logSumExp(c(Alphas[1] + gamma_12 + dpois(y[i, t], lambda = e.it * exp(r[t] + s[t] + u[i] + B[1] * log(y[i, t-1] + 1) + B[2] * z.it[i, t] + 1), log = TRUE), Alphas[2] + gamma_22 + dpois(y[i, t], lambda = e.it * exp(r[t] + s[t] + u[i] + B[1] * log(y[i, t-1] + 1) + B[2] * z.it[i, t] + 1), log = TRUE)))
+          alpha.2 <- logSumExp(c(Alphas[1] + gamma_12 + dpois(y[i, t], lambda = e.it * exp(r[t] + s[t] + u[i] + B[1] * log(y[i, t-1] + 1) + B[2] * (z.it[i, t] + 1)), log = TRUE), Alphas[2] + gamma_22 + dpois(y[i, t], lambda = e.it * exp(r[t] + s[t] + u[i] + B[1] * log(y[i, t-1] + 1) + B[2] * (z.it[i, t] + 1)), log = TRUE)))
         }
         
         log.forward.probs[i,] <- c(alpha.1, alpha.2)
