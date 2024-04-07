@@ -346,10 +346,10 @@ functions {
       
       for(i in 1:ndept){
       length[i] = dims(neighbors(i, adjacencyMatrix))[1];
-      sumNeighbor[i] = 0;
       z_it[i, 1] = 0;
       
         for(t in 2:time){
+            sumNeighbor[i] = 0;
           for(b in 1:length[i]){
             sumNeighbor[i] += y[neighbors(i, adjacencyMatrix)[b], t-1];
           }
@@ -403,10 +403,10 @@ functions {
       
       for(i in 1:ndept){
       length[i] = dims(neighbors(i, adjacencyMatrix))[1];
-      sumNeighbor[i] = 0;
       z_it[i, 1] = 0;
       
         for(t in 2:time){
+            sumNeighbor[i] = 0;
           for(b in 1:length[i]){
             sumNeighbor[i] += y[neighbors(i, adjacencyMatrix)[b], t-1];
           }
