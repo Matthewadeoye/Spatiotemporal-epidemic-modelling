@@ -38,7 +38,7 @@ functions {
     int time = dims(r)[1];  
     real res = 0;
     for (i in 3:time) {
-      res += (r[i-2] - 2 * r[i-1] + r[i])^2;
+      res += (r[i-2] - (2 * r[i-1]) + r[i])^2;
     }
     return (((time - 2) / 2.0) * log(kappa_r) - (kappa_r / 2.0) * res);   
   }
@@ -80,42 +80,15 @@ functions {
   matrix[time, nstate] beta;
   
   if(Model == 0){
+  //Model0
+    matrix[ndept, time] allLoglikelihood;
 
   for (i in 1:ndept) {
-  
-  // Initialization of the first time step for each department
-
-    alpha[1, 1] = log(init_density[1]) + poisson_lpmf(y[i, 1] | e_it[i, 1] * exp(r[1] + s[1] + u[i] + 0));
-    alpha[1, 2] = 0;
-    beta[1, 1] = 0;
-    beta[1, 2] = log(init_density[2]) + poisson_lpmf(y[i, 1] | e_it[i, 1] * exp(r[1] + s[1] + u[i] + 1));
-    
-    Alphas[1, 1] = alpha[1, 1];
-    Alphas[1, 2] = beta[1, 2];    
-  
-  // Dynamic programming loop for the remaining time steps
-      for (t in 2:time) {
-
-         alpha[t, 1] = Alphas[t-1, 1] + log(gamma[1, 1]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 0));
-         alpha[t, 2] = Alphas[t-1, 2] + log(gamma[2, 1]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 0));
-         beta[t, 1] =  Alphas[t-1, 1] + log(gamma[1, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 1));
-         beta[t, 2] =  Alphas[t-1, 2] + log(gamma[2, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 1));
-         Alphas[t, 1] = log_sum_exp(alpha[t,]);
-         Alphas[t, 2] = log_sum_exp(beta[t,]);
-}
-      
-      // save the final forward probabilities
-
-      logforwardprobs[i,1] = log_sum_exp(alpha[time,]);
-      logforwardprobs[i,2] = log_sum_exp(beta[time,]);
-
-    }
-
-      vector[ndept] rowlogsumexp;
-      for (i in 1:ndept) {
-      rowlogsumexp[i] = log_sum_exp(logforwardprobs[i,]);      
-    }
-      real fullLogLikelihood = sum(rowlogsumexp);
+    for (t in 1:time) {
+         allLoglikelihood[i, t] = poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i]));
+   }
+}        
+      real fullLogLikelihood = sum(allLoglikelihood);
       return fullLogLikelihood;
   }
   
@@ -250,15 +223,16 @@ functions {
            z_it2[i, 1] = 0;
       
         for(t in 2:time){
+          int flag = 0; 
           for(b in 1:length[i]){
           if(y[neighbors(i, adjacencyMatrix)[b], t-1] > 0){
-            z_it2[i, t]= 1;
-          } else {
-            z_it2[i, t]= 0;
+            flag += 1;
+            break;
+            } 
+          }
+          z_it2[i, t] = flag;
           }
         }
-      }
-    }
       
   for (i in 1:ndept) {
   
@@ -267,7 +241,7 @@ functions {
     alpha[1, 1] = log(init_density[1]) + poisson_lpmf(y[i, 1] | e_it[i, 1] * exp(r[1] + s[1] + u[i] + 0));
     alpha[1, 2] = 0;
     beta[1, 1] = 0;
-    beta[1, 2] = log(init_density[2]) + poisson_lpmf(y[i, 1] | e_it[i, 1] * exp(r[1] + s[1] + u[i] + B[1] * z_it[i, 1] + B[2] * z_it2[i, 1]));
+    beta[1, 2] = log(init_density[2]) + poisson_lpmf(y[i, 1] | e_it[i, 1] * exp(r[1] + s[1] + u[i] + (B[1] * z_it[i, 1]) + (B[2] * z_it2[i, 1])));
     
     Alphas[1, 1] = alpha[1, 1];
     Alphas[1, 2] = beta[1, 2];    
@@ -277,8 +251,8 @@ functions {
 
          alpha[t, 1] = Alphas[t-1, 1] + log(gamma[1, 1]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 0));
          alpha[t, 2] = Alphas[t-1, 2] + log(gamma[2, 1]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 0));
-         beta[t, 1] =  Alphas[t-1, 1] + log(gamma[1, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + B[1] * z_it[i, t] + B[2] * z_it2[i, t]));
-         beta[t, 2] =  Alphas[t-1, 2] + log(gamma[2, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + B[1] * z_it[i, t] + B[2] * z_it2[i, t]));
+         beta[t, 1] =  Alphas[t-1, 1] + log(gamma[1, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + (B[1] * z_it[i, t]) + (B[2] * z_it2[i, t])));
+         beta[t, 2] =  Alphas[t-1, 2] + log(gamma[2, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + (B[1] * z_it[i, t]) + (B[2] * z_it2[i, t])));
          Alphas[t, 1] = log_sum_exp(alpha[t,]);
          Alphas[t, 2] = log_sum_exp(beta[t,]);
 }
@@ -410,7 +384,7 @@ functions {
           for(b in 1:length[i]){
             sumNeighbor[i] += y[neighbors(i, adjacencyMatrix)[b], t-1];
           }
-          z_it[i, t] = sumNeighbor[i];
+          z_it[i, t] = sumNeighbor[i] + 1;
         }
       }
       
@@ -421,7 +395,7 @@ functions {
     alpha[1, 1] = log(init_density[1]) + poisson_lpmf(y[i, 1] | e_it[i, 1] * exp(r[1] + s[1] + u[i] + 0));
     alpha[1, 2] = 0;
     beta[1, 1] = 0;
-    beta[1, 2] = log(init_density[2]) + poisson_lpmf(y[i, 1] | e_it[i, 1] * exp(r[1] + s[1] + u[i] + B[1] * log(0 + 1) + B[2] * (z_it[i, 1] + 1)));
+    beta[1, 2] = log(init_density[2]) + poisson_lpmf(y[i, 1] | e_it[i, 1] * exp(r[1] + s[1] + u[i] + B[1] * log(0 + 1) + B[2] * log(z_it[i, 1] + 1)));
     
     Alphas[1, 1] = alpha[1, 1];
     Alphas[1, 2] = beta[1, 2];    
@@ -431,8 +405,8 @@ functions {
 
          alpha[t, 1] = Alphas[t-1, 1] + log(gamma[1, 1]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 0));
          alpha[t, 2] = Alphas[t-1, 2] + log(gamma[2, 1]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 0));
-         beta[t, 1] =  Alphas[t-1, 1] + log(gamma[1, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + B[1] * log(y[i, t-1] + 1) + B[2] * (z_it[i, t] + 1)));
-         beta[t, 2] =  Alphas[t-1, 2] + log(gamma[2, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + B[1] * log(y[i, t-1] + 1) + B[2] * (z_it[i, t] + 1)));
+         beta[t, 1] =  Alphas[t-1, 1] + log(gamma[1, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + B[1] * log(y[i, t-1] + 1) + B[2] * log(z_it[i, t])));
+         beta[t, 2] =  Alphas[t-1, 2] + log(gamma[2, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + B[1] * log(y[i, t-1] + 1) + B[2] * log(z_it[i, t])));
          Alphas[t, 1] = log_sum_exp(alpha[t,]);
          Alphas[t, 2] = log_sum_exp(beta[t,]);
 }
@@ -451,7 +425,47 @@ functions {
       real fullLogLikelihood = sum(rowlogsumexp);
       return fullLogLikelihood;
   }
-    return 0;
+  
+  else if(Model == 7){
+  //Model7: z*B is fixed to 1 in hyperendemic state
+  for (i in 1:ndept) {
+  
+  // Initialization of the first time step for each department
+
+    alpha[1, 1] = log(init_density[1]) + poisson_lpmf(y[i, 1] | e_it[i, 1] * exp(r[1] + s[1] + u[i] + 0));
+    alpha[1, 2] = 0;
+    beta[1, 1] = 0;
+    beta[1, 2] = log(init_density[2]) + poisson_lpmf(y[i, 1] | e_it[i, 1] * exp(r[1] + s[1] + u[i] + 1));
+    
+    Alphas[1, 1] = alpha[1, 1];
+    Alphas[1, 2] = beta[1, 2];    
+  
+  // Dynamic programming loop for the remaining time steps
+      for (t in 2:time) {
+
+         alpha[t, 1] = Alphas[t-1, 1] + log(gamma[1, 1]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 0));
+         alpha[t, 2] = Alphas[t-1, 2] + log(gamma[2, 1]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 0));
+         beta[t, 1] =  Alphas[t-1, 1] + log(gamma[1, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 1));
+         beta[t, 2] =  Alphas[t-1, 2] + log(gamma[2, 2]) + poisson_lpmf(y[i, t] | e_it[i, t] * exp(r[t] + s[t] + u[i] + 1));
+         Alphas[t, 1] = log_sum_exp(alpha[t,]);
+         Alphas[t, 2] = log_sum_exp(beta[t,]);
+}
+      
+      // save the final forward probabilities
+
+      logforwardprobs[i,1] = log_sum_exp(alpha[time,]);
+      logforwardprobs[i,2] = log_sum_exp(beta[time,]);
+
+    }
+
+      vector[ndept] rowlogsumexp;
+      for (i in 1:ndept) {
+      rowlogsumexp[i] = log_sum_exp(logforwardprobs[i,]);      
+    }
+      real fullLogLikelihood = sum(rowlogsumexp);
+      return fullLogLikelihood;
+  }
+   return 0;
   }
 }
 
@@ -466,8 +480,9 @@ data {
   simplex[nstate] init_density;       // initial distribution of the Markov chain
   matrix[ndept, time] e_it;           // initial Susceptibles
   matrix[ndept, ndept] R;             // Structure / Precision matrix (IGMRF1/IGMRF2)
-  int<lower=0, upper=6> Model;        // Model's functional form
+  int<lower=0, upper=7> Model;        // Model's functional form
   array[ndept, ndept] int adjacencyMatrix;     // Adjacency matrix
+  int<lower=0, upper=2> npar;         // Number of autoregressive parameters
 }
 
 parameters {
@@ -479,7 +494,7 @@ parameters {
   vector[ndept-1] u;                     // Spatial components
   vector[time] r;                        // Trend components
   vector[time] s;                        // Seasonal components
-  vector[2] B;                           // autoregressive coefficients
+  vector<lower=0>[npar] B;               // autoregressive parameters
 }
 
 transformed parameters {
@@ -502,4 +517,28 @@ model {
 
   // Likelihood
   target += Stan_Loglikelihood(y, r, s, uconstrained, G(G12, G21), init_density, e_it, B, Model, adjacencyMatrix);
+}
+
+generated quantities {
+  real log_lik = Stan_Loglikelihood(y, r, s, uconstrained, G(G12, G21), init_density, e_it, B, Model, adjacencyMatrix);
+
+  matrix[ndept, time] lambda_it;
+for(i in 1:ndept){
+  for(t in 1:time){
+    lambda_it[i, t] = exp(r[t] + s[t] + uconstrained[i]);
+  }
+}
+
+//DIC
+  matrix[ndept, time] d_it_square;
+for(i in 1:ndept){
+  for(t in 1:time){
+    if(y[i, t] > 0){
+      d_it_square[i, t] = 2 * (y[i, t] * log(y[i, t]/(e_it[i, t] * lambda_it[i, t])) - (y[i, t] - e_it[i, t] * lambda_it[i, t]));
+    }else{
+      d_it_square[i, t] = 2 * e_it[i, t] * lambda_it[i, t];
+    }
+  }
+}
+real Dbar = sum(d_it_square);
 }
