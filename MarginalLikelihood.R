@@ -24,6 +24,6 @@ for(i in 1:num_samples){
   EvaluatedLogDensities[i]<- newlogLikelihood(y, e_it, Model, z_it, z_it2, theta) + logPriors(theta, R)
                             - sum(mvtnorm::dmvt(theta, delta = mu, sigma = scaled_sigma, df = length(mu), log = TRUE)) 
 }
-  MarginalLikelihood<- log(1) - log(dim(posteriorSamples)[2]) + logSumExp(EvaluatedLogDensities)
+  MarginalLikelihood<- log(1) - log(num_samples) + logSumExp(EvaluatedLogDensities)
   return(MarginalLikelihood)
 }
