@@ -18,6 +18,7 @@ diag(R)<- -rowSums(R, na.rm = T)
 qr(R)$rank
 source("GeneralLoglikelihood.R")
 source("DesignMatrix.R")
+source("OutbreakProbability.R")
 
 #Crude estimates
 ydot<- colSums(y)
@@ -68,16 +69,17 @@ G<- function(G12, G21){
   return(m)
 }
 
-Model<- 0
-z_it<- DesignMatrixModel0(y, France_adjmat)[[1]]
-z_it2<- DesignMatrixModel0(y, France_adjmat)[[2]]
+Model<- 1
+z_it<- DesignMatrixModel1(y, France_adjmat)[[1]]
+z_it2<- DesignMatrixModel1(y, France_adjmat)[[2]]
 
-num_iteration<- 100000
+num_iteration<- 25000
 MC_chain<- matrix(NA, nrow=num_iteration, ncol=5+time+time+ndept+2)
 MC_chain[1,]<- c(runif(1), runif(1), 8214, 121, 1.4, crudeR, crudeS, crudeU, c(0, 0))
 acceptedR<- 0
 acceptedS<- 0
 accepted<- 0
+#likelihoodcurrent<- GeneralLoglikelihood(y, MC_chain[1,5+(1:time)], MC_chain[1, 5+time+(1:time)], MC_chain[1, 318:411], G(MC_chain[1, 1],MC_chain[1, 2]), e_it, MC_chain[1, 5+time+time+ndept+(1:2)], Model, z_it, z_it2)
 
 zigmaR<- diag(rep(0.13, time), nrow = time, ncol = time)
 zigmaS<- diag(rep(0.13, time), nrow = time, ncol = time)
@@ -123,7 +125,7 @@ for(i in 14:(time-11)){
   SRWPrecMat[i-1, ((i-12):(i+10))]<- c(1:12,11:1)
 }
 for(i in (time-1):(time-11)){
-  SRWPrecMat[i, (i-11):time]<- c(1:(156-i), rep((156-i)+1, i-144), (time-i):1)
+  SRWPrecMat[i, (i-11):time]<- c(1:(time-i), rep((time-i)+1, i-(time-12)), (time-i):1)
 }
 SRWPrecMat[time, ((time-11):time)]<- rep(1, 12)
 strs<- SRWPrecMat
@@ -149,74 +151,18 @@ SBlocks<- list(SA,SB,SC,SD,SE,Sf,Sg,SH,SI,SJ,SK,SL,SM,SN,SO,SP)
 
 for(i in 2:num_iteration){
   print(i)
-  if(Model == 0){
-    proposedB <- c(0, 0)
-  }else if(Model == 1 || Model == 2 || Model == 4 || Model == 5) {
-    proposedB <- rnorm(1, mean = MC_chain[i-1, 412], sd = 0.9)
-    proposedB <- c(proposedB, 0)
-  }else if(Model == 3 || Model == 6){
-    proposedB <- rnorm(2, mean = MC_chain[i-1, 5+time+time+ndept+(1:2)], sd = c(0.9, 0.8))
-  }
   
   proposedkappaR<- rgamma(1, shape = 1 + (time-2)/2, rate = 0.0001 + (t(MC_chain[i-1, 5+(1:time)]) %*% strr %*% MC_chain[i-1, 5+(1:time)])/2)
   MC_chain[i,3]<- proposedkappaR
-  MC_chain[i, 5+time+time+ndept+(1:2)]<- proposedB
+  print(paste("GibbskappaR = ", proposedkappaR))
   
   proposedkappaS<- rgamma(1, shape = 1 + (time-11)/2, rate = 0.0001 + (t(MC_chain[i-1, 5+time+(1:time)]) %*% strs %*% MC_chain[i-1, 5+time+(1:time)])/2)
   MC_chain[i,4]<- proposedkappaS
+  print(paste("GibbskappaS = ", proposedkappaS))
   
   proposedkappaU<- rgamma(1, shape = 1 + (ndept-1)/2, rate = 0.01 + (t(MC_chain[i-1, 5+time+time+(1:ndept)]) %*% R %*% MC_chain[i-1, 5+time+time+(1:ndept)])/2)
   MC_chain[i,5]<- proposedkappaU
-  
-  proposedG12<- abs(rnorm(1,mean=MC_chain[i-1,1], sd=0.9))
-  if(proposedG12>1) proposedG12=2-proposedG12
-  
-  priorcurrent12<- dbeta(MC_chain[i-1,1], shape1 = 1, shape2 = 1, log=TRUE)
-  priorproposed12<- dbeta(proposedG12, shape1 = 1, shape2 = 1, log=TRUE) 
-  
-  likelihoodcurrent<- GeneralLoglikelihood(y, MC_chain[i-1, 5+(1:time)], MC_chain[i-1, 5+time+(1:time)], MC_chain[i-1, 5+time+time+(1:ndept)], G(MC_chain[i-1, 1],MC_chain[i-1,2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model, z_it, z_it2)
-  likelihoodproposed<- GeneralLoglikelihood(y, MC_chain[i-1, 5+(1:time)], MC_chain[i-1, 5+time+(1:time)], MC_chain[i-1, 5+time+time+(1:ndept)], G(proposedG12, MC_chain[i-1,2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
-  
-  mh.ratio<- exp(likelihoodproposed + priorproposed12
-                 - likelihoodcurrent - priorcurrent12)
-  
-  print(paste("mh.ratioG12 = ", mh.ratio))
-  
-  if(!is.na(mh.ratio) && runif(1) < mh.ratio){
-    MC_chain[i, 1]<- proposedG12
-    
-    accepted<- accepted + 1
-  }
-  else{
-    MC_chain[i, 1]<- MC_chain[i-1,1]
-    
-    accepted<- accepted + 0
-  }
-  
-  proposedG21<- abs(rnorm(1,mean=MC_chain[i-1,2], sd=0.9))
-  if(proposedG21>1) proposedG21=2-proposedG21
-  
-  priorcurrent21<- dbeta(MC_chain[i-1,2], shape1 = 1, shape2 = 1, log=TRUE)
-  priorproposed21<- dbeta(proposedG21, shape1 = 1, shape2 = 1, log=TRUE)
-  
-  likelihoodcurrent<- GeneralLoglikelihood(y, MC_chain[i-1, 5+(1:time)], MC_chain[i-1, 5+time+(1:time)], MC_chain[i-1, 5+time+time+(1:ndept)], G(MC_chain[i,1],MC_chain[i-1,2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model, z_it, z_it2)
-  likelihoodproposed<- GeneralLoglikelihood(y, MC_chain[i-1, 5+(1:time)], MC_chain[i-1, 5+time+(1:time)], MC_chain[i-1, 5+time+time+(1:ndept)], G(MC_chain[i,1],proposedG21), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
-  
-  mh.ratio<- exp(likelihoodproposed + priorproposed21
-                 - likelihoodcurrent - priorcurrent21)
-  
-  print(paste("mh.ratioG21 = ", mh.ratio))
-  
-  if(!is.na(mh.ratio) && runif(1) < mh.ratio){
-    MC_chain[i,2]<- proposedG21
-    
-    accepted<- accepted + 1
-  }
-  else{
-    MC_chain[i,2]<- MC_chain[i-1,2]
-    
-    accepted<- accepted + 0
-  }
+  print(paste("GibbskappaU = ", proposedkappaU))
   
   proposedspatcomps<- rmvnorm(1, mean=MC_chain[i-1, 5+time+time+(1:(ndept-1))], sigma = zigmaU) 
   proposedspatcomps<- c(proposedspatcomps, -sum(proposedspatcomps))
@@ -227,8 +173,8 @@ for(i in 2:num_iteration){
   proposalproposedcompsU<- sum(dmvnorm(proposedspatcomps[-94], mean = MC_chain[i-1, 5+time+time+(1:(ndept-1))], sigma = zigmaU, log = TRUE))
   proposalcurrentcompsU<- sum(dmvnorm(MC_chain[i-1, 5+time+time+(1:(ndept-1))], mean = proposedspatcomps[-94], sigma = zigmaU, log = TRUE))
   
-  likelihoodcurrent<- GeneralLoglikelihood(y,MC_chain[i-1, 5+(1:time)],MC_chain[i-1, 5+time+(1:time)], MC_chain[i-1, 5+time+time+(1:ndept)], G(MC_chain[i, 1],MC_chain[i,2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
-  likelihoodproposed<- GeneralLoglikelihood(y,MC_chain[i-1, 5+(1:time)],MC_chain[i-1, 5+time+(1:time)], proposedspatcomps, G(MC_chain[i, 1], MC_chain[i, 2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
+  likelihoodcurrent<- GeneralLoglikelihood(y,MC_chain[i-1, 5+(1:time)],MC_chain[i-1, 5+time+(1:time)], MC_chain[i-1, 5+time+time+(1:ndept)], G(MC_chain[i-1, 1],MC_chain[i-1,2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
+  likelihoodproposed<- GeneralLoglikelihood(y,MC_chain[i-1, 5+(1:time)],MC_chain[i-1, 5+time+(1:time)], proposedspatcomps, G(MC_chain[i-1, 1], MC_chain[i-1, 2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
   
   mh.ratioU<- exp(likelihoodproposed + priorproposedUcomps + proposalcurrentcompsU
                   - likelihoodcurrent - priorcurrentUcomps - proposalproposedcompsU)
@@ -288,24 +234,21 @@ for(i in 2:num_iteration){
     if(j==1){
       Rconditionalmean<- -covBlocks[[j]] %*% RW2PrecMat[(Blocks[[j]])-5, (unlist(Blocks[-j]))-5] %*% MC_chain[i-1, unlist(Blocks[-j])]
       proposedRcomps<- rmvnorm(1, mean = Rconditionalmean, sigma = covBlocks[[j]]) 
-      proposedRcomps<- c(proposedRcomps, MC_chain[i-1, unlist(Blocks[-j])])
-      
+      proposedRcomps<- c(proposedRcomps, MC_chain[i-1, unlist(Blocks[-j])])      
     }
     else if(j!=1 && j!=12){ 
       Rconditionalmean<- -covBlocks[[j]] %*% (RW2PrecMat[(Blocks[[j]])-5, (unlist(Blocks[1:(j-1)]))-5] %*% MC_chain[i, unlist(Blocks[1:(j-1)])] + RW2PrecMat[(Blocks[[j]])-5, (unlist(Blocks[(j+1):12]))-5] %*% MC_chain[i, unlist(Blocks[(j+1):12])]) 
       proposedRcomps<- rmvnorm(1, mean = Rconditionalmean, sigma = covBlocks[[j]]) 
-      proposedRcomps<- c(MC_chain[i, unlist(Blocks[1:(j-1)])], proposedRcomps, MC_chain[i, unlist(Blocks[(j+1):12])])
-      
+      proposedRcomps<- c(MC_chain[i, unlist(Blocks[1:(j-1)])], proposedRcomps, MC_chain[i, unlist(Blocks[(j+1):12])])      
     }
     else if(j==12){
       Rconditionalmean<- -covBlocks[[j]] %*% RW2PrecMat[(Blocks[[j]])-5, (unlist(Blocks[-j]))-5] %*% MC_chain[i, unlist(Blocks[-j])]
       proposedRcomps<- rmvnorm(1, mean = Rconditionalmean, sigma = covBlocks[[j]]) 
-      proposedRcomps<- c(MC_chain[i, unlist(Blocks[-j])], proposedRcomps)
-      
+      proposedRcomps<- c(MC_chain[i, unlist(Blocks[-j])], proposedRcomps)      
     }
     
-    likelihoodcurrent<- GeneralLoglikelihood(y, MC_chain[i-1, 5+(1:time)], MC_chain[i-1, 5+time+(1:time)], MC_chain[i, 5+time+time+(1:ndept)], G(MC_chain[i, 1], MC_chain[i, 2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model, z_it, z_it2)
-    likelihoodproposed<- GeneralLoglikelihood(y, proposedRcomps, MC_chain[i-1, 5+time+(1:time)], MC_chain[i, 5+time+time+(1:ndept)], G(MC_chain[i, 1], MC_chain[i, 2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model, z_it, z_it2)
+    likelihoodcurrent<- GeneralLoglikelihood(y, MC_chain[i-1, 5+(1:time)], MC_chain[i-1, 5+time+(1:time)], MC_chain[i, 5+time+time+(1:ndept)], G(MC_chain[i-1, 1], MC_chain[i-1, 2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model, z_it, z_it2)
+    likelihoodproposed<- GeneralLoglikelihood(y, proposedRcomps, MC_chain[i-1, 5+time+(1:time)], MC_chain[i, 5+time+time+(1:ndept)], G(MC_chain[i-1, 1], MC_chain[i-1, 2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model, z_it, z_it2)
     
     mh.ratioR<- exp(likelihoodproposed - likelihoodcurrent)
     
@@ -315,12 +258,10 @@ for(i in 2:num_iteration){
     }
     else{
       if(j==1){
-        MC_chain[i, 5+(1:time)]<- MC_chain[i-1, 5+(1:time)]
-        
+        MC_chain[i, 5+(1:time)]<- MC_chain[i-1, 5+(1:time)]        
       }
       else if(j!=1){
-        MC_chain[i, 5+(1:time)]<- MC_chain[i, 5+(1:time)]
-        
+        MC_chain[i, 5+(1:time)]<- MC_chain[i, 5+(1:time)] 
       }      
     }
   }
@@ -342,8 +283,8 @@ for(i in 2:num_iteration){
       proposedScomps<- c(MC_chain[i, unlist(SBlocks[-j])], proposedScomps)
     }
     
-    likelihoodcurrent<- GeneralLoglikelihood(y,MC_chain[i, 5+(1:time)],MC_chain[i-1,5+time+(1:time)],MC_chain[i, 5+time+time+(1:ndept)], G(MC_chain[i, 1], MC_chain[i, 2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
-    likelihoodproposed<- GeneralLoglikelihood(y,MC_chain[i, 5+(1:time)],proposedScomps,MC_chain[i, 5+time+time+(1:ndept)], G(MC_chain[i, 1], MC_chain[i, 2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
+    likelihoodcurrent<- GeneralLoglikelihood(y,MC_chain[i, 5+(1:time)],MC_chain[i-1,5+time+(1:time)],MC_chain[i, 5+time+time+(1:ndept)], G(MC_chain[i-1, 1], MC_chain[i-1, 2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
+    likelihoodproposed<- GeneralLoglikelihood(y,MC_chain[i, 5+(1:time)],proposedScomps,MC_chain[i, 5+time+time+(1:ndept)], G(MC_chain[i-1, 1], MC_chain[i-1, 2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
     
     mh.ratioS<- exp(likelihoodproposed - likelihoodcurrent)
     
@@ -353,15 +294,95 @@ for(i in 2:num_iteration){
     }
     else{
       if(j==1){
-        MC_chain[i, 5+time+(1:time)]<- MC_chain[i-1, 5+time+(1:time)]
-        
+        MC_chain[i, 5+time+(1:time)]<- MC_chain[i-1, 5+time+(1:time)] 
       }
       else if(j!=1){
-        MC_chain[i, 5+time+(1:time)]<- MC_chain[i, 5+time+(1:time)]
-        
+        MC_chain[i, 5+time+(1:time)]<- MC_chain[i, 5+time+(1:time)]       
       }      
     }
   }
+  
+  if(Model == 0){
+    proposedB <- c(0, 0)
+  }else if(Model == 1 || Model == 2 || Model == 4 || Model == 5) {
+    proposedB <- abs(rnorm(1, mean = MC_chain[i-1, 412], sd = 0.09))
+    proposedB <- c(proposedB, 0)
+  }else if(Model == 3 || Model == 6){
+    proposedB <- abs(rnorm(2, mean = MC_chain[i-1, 5+time+time+ndept+(1:2)], sd = c(0.09, 0.08)))
+  }
+  
+  priorcurrentB<- sum(dexp(MC_chain[i-1, 5+time+time+ndept+(1:2)], rate = 1, log=TRUE))
+  priorproposedB<- sum(dexp(proposedB, rate = 1, log=TRUE)) 
+  
+  likelihoodcurrent<- GeneralLoglikelihood(y, MC_chain[i, 5+(1:time)], MC_chain[i, 5+time+(1:time)], MC_chain[i, 5+time+time+(1:ndept)], G(MC_chain[i-1, 1],MC_chain[i-1,2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model, z_it, z_it2)
+  likelihoodproposed<- GeneralLoglikelihood(y, MC_chain[i, 5+(1:time)], MC_chain[i, 5+time+(1:time)], MC_chain[i, 5+time+time+(1:ndept)], G(MC_chain[i-1, 1], MC_chain[i-1,2]), e_it, proposedB, Model,z_it, z_it2)
+  
+  mh.ratio<- exp(likelihoodproposed + priorproposedB
+                 - likelihoodcurrent - priorcurrentB)
+  
+  print(paste("mh.ratioB = ", mh.ratio))
+  
+  if(!is.na(mh.ratio) && runif(1) < mh.ratio){
+    MC_chain[i, 5+time+time+ndept+(1:2)]<- proposedB
+  }
+  else{
+    MC_chain[i, 5+time+time+ndept+(1:2)]<- MC_chain[i-1, 5+time+time+ndept+(1:2)]
+  }
+  
+  MC<- Decoding(y = y, r = MC_chain[i, 5+(1:time)], s = MC_chain[i, 5+time+(1:time)], u = MC_chain[i, 5+time+time+(1:ndept)], Gamma = G(MC_chain[i-1, 1], MC_chain[i-1, 2]), e_it = e_it, B = MC_chain[i, 5+time+time+ndept+(1:2)], Model = Model, z_it = z_it, z_it2 = z_it2)
+  ifelse(MC > 0.5, 1, 0)
+  MC11<- matrix(0, nrow = ndept, ncol = time)
+  MC12<- matrix(0, nrow = ndept, ncol = time)
+  MC21<- matrix(0, nrow = ndept, ncol = time)
+  MC22<- matrix(0, nrow = ndept, ncol = time)
+  
+  for(l in 1:ndept){
+    for(t in 1:(time-1)){
+      if(MC[l, t]== 0 && MC[l, t+1]== 0){
+        MC11[l, t]<- 1
+      }else{
+        MC11[l, t]<- 0
+      }
+    }
+  }
+  
+  for(l in 1:ndept){
+    for(t in 1:(time-1)){
+      if(MC[l, t]== 0 && MC[l, t+1]== 1){
+        MC12[l, t]<- 1
+      }else{
+        MC12[l, t]<- 0
+      }
+    }
+  }  
+  
+  for(l in 1:ndept){
+    for(t in 1:(time-1)){
+      if(MC[l, t]== 1 && MC[l, t+1]== 0){
+        MC21[l, t]<- 1
+      }else{
+        MC21[l, t]<- 0
+      }
+    }
+  }  
+  
+  for(l in 1:ndept){
+    for(t in 1:(time-1)){
+      if(MC[l, t]== 1 && MC[l, t+1]== 1){
+        MC22[l, t]<- 1
+      }else{
+        MC22[l, t]<- 0
+      }
+    }
+  }  
+  
+  proposedG12<- rbeta(1, shape1 = 1 + sum(MC12), shape2 = 1 + sum(MC11))
+  MC_chain[i, 1]<- proposedG12
+  print(paste("GibbsG12 = ", proposedG12))
+  
+  proposedG21<- rbeta(1, shape1 = 1 + sum(MC21), shape2 = 1 + sum(MC22))
+  MC_chain[i, 2]<- proposedG21
+  print(paste("GibbsG21 = ", proposedG21))
   
   #Adapting zigmaR
   if(i==10){
@@ -370,9 +391,9 @@ for(i in 2:num_iteration){
     XnbarR <- colMeans(XnR) 
     zigmaR <- cov(XnR) + epsilonR * diag(rep(1, time))
     zigmaR<- optconstantR * zigmaR
-  } else if (i > 10){ 
+  }else if(i > 10){ 
     
-    ### Using random walk after 10 conditional prior proposals
+    ### Start random walk after 10 conditional prior proposals
     
     proposedRcomps<- rmvnorm(1, mean = MC_chain[i, 5+(1:time)], sigma = zigmaR)
     
@@ -382,8 +403,8 @@ for(i in 2:num_iteration){
     proposalproposedRcomps<- sum(dmvnorm(proposedRcomps, mean = MC_chain[i, 5+(1:time)], sigma = zigmaR, log = TRUE))
     proposalcurrentRcomps<- sum(dmvnorm(MC_chain[i, 5+(1:time)], mean = proposedRcomps, sigma = zigmaR, log = TRUE))
     
-    likelihoodcurrent<- GeneralLoglikelihood(y,MC_chain[i, 5+(1:time)],MC_chain[i, 5+time+(1:time)],MC_chain[i, 5+time+time+(1:ndept)],G(MC_chain[i,1],MC_chain[i,2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
-    likelihoodproposed<- GeneralLoglikelihood(y,proposedRcomps,MC_chain[i, 5+time+(1:time)],MC_chain[i, 5+time+time+(1:ndept)],G(MC_chain[i,1],MC_chain[i,2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
+    likelihoodcurrent<- GeneralLoglikelihood(y,MC_chain[i, 5+(1:time)],MC_chain[i, 5+time+(1:time)],MC_chain[i, 5+time+time+(1:ndept)],G(MC_chain[i,1],MC_chain[i,2]), e_it, MC_chain[i, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
+    likelihoodproposed<- GeneralLoglikelihood(y,proposedRcomps,MC_chain[i, 5+time+(1:time)],MC_chain[i, 5+time+time+(1:ndept)],G(MC_chain[i,1],MC_chain[i,2]), e_it, MC_chain[i, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
     
     mh.ratioR<- exp(likelihoodproposed + priorproposedRcomps + proposalcurrentRcomps
                     - likelihoodcurrent - priorcurrentRcomps - proposalproposedRcomps)
@@ -409,8 +430,8 @@ for(i in 2:num_iteration){
     proposalproposedScomps<- sum(dmvnorm(proposedScomps, mean = MC_chain[i, 5+time+(1:time)], sigma = zigmaS, log = TRUE))
     proposalcurrentScomps<- sum(dmvnorm(MC_chain[i, 5+time+(1:time)], mean = proposedScomps, sigma = zigmaS, log = TRUE))
     
-    likelihoodcurrent<- GeneralLoglikelihood(y,MC_chain[i, 5+(1:time)], MC_chain[i, 5+time+(1:time)], MC_chain[i, 5+time+time+(1:ndept)], G(MC_chain[i, 1], MC_chain[i,2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
-    likelihoodproposed<- GeneralLoglikelihood(y,MC_chain[i, 5+(1:time)], proposedScomps, MC_chain[i, 5+time+time+(1:ndept)],G(MC_chain[i, 1], MC_chain[i, 2]), e_it, MC_chain[i-1, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
+    likelihoodcurrent<- GeneralLoglikelihood(y,MC_chain[i, 5+(1:time)], MC_chain[i, 5+time+(1:time)], MC_chain[i, 5+time+time+(1:ndept)], G(MC_chain[i, 1], MC_chain[i,2]), e_it, MC_chain[i, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
+    likelihoodproposed<- GeneralLoglikelihood(y,MC_chain[i, 5+(1:time)], proposedScomps, MC_chain[i, 5+time+time+(1:ndept)],G(MC_chain[i, 1], MC_chain[i, 2]), e_it, MC_chain[i, 5+time+time+ndept+(1:2)], Model,z_it, z_it2)
     
     mh.ratioS<- exp(likelihoodproposed + priorproposedScomps + proposalcurrentScomps
                     - likelihoodcurrent - priorcurrentScomps - proposalproposedScomps)
@@ -480,13 +501,13 @@ RsMCMC
 
 SsMCMC<- numeric(time)
 for(i in 1:time){
-  SsMCMC[i] = mean(MC_chain[, 5+time+i])
+  SsMCMC[i] = mean(MC_chain[,161+i])
 }
 SsMCMC
 
 UsMCMC<- numeric(ndept)
 for(i in 1:ndept){
-  UsMCMC[i] = mean(MC_chain[, 5+time+time+i])
+  UsMCMC[i] = mean(MC_chain[,317+i])
 }
 UsMCMC
 

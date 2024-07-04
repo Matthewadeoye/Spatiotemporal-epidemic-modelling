@@ -1,6 +1,23 @@
+#stationary distribution
+state_dist <- function(G12, G21){
+  m<- matrix(c(1-G12,G12,G21,1-G21),2,2,byrow=T)
+  
+  eigen_decomp <- eigen(t(m))
+  eigenvalues <- eigen_decomp$values
+  eigenvectors <- eigen_decomp$vectors
+  
+  index <- which(abs(eigenvalues - 1) < 1e-8)
+  
+  stationary_distribution <- eigenvectors[, index]
+  
+  stationary_distribution <- stationary_distribution / sum(stationary_distribution)
+  
+  return(stationary_distribution)
+}
+
 #logLikelihood via forward filtering
 
-GeneralLoglikelihood <- function(y,r,s,u,Gamma,init_density,e_it,B,model,adjacencyMatrix, z_it, z_it2) {
+GeneralLoglikelihood <- function(y,r,s,u,Gamma,e_it,B,model,z_it, z_it2) {
   ndept <- nrow(y)  
   nstate <- ncol(Gamma)  
   time <- ncol(y)  
@@ -8,7 +25,6 @@ GeneralLoglikelihood <- function(y,r,s,u,Gamma,init_density,e_it,B,model,adjacen
   gamma_12 <- log(Gamma[1, 2])
   gamma_21 <- log(Gamma[2, 1])
   gamma_22 <- log(Gamma[2, 2])
-  init_density<- log(init_density)
   
   log.forward.probs <- matrix(NA, ndept, nstate)
   
@@ -29,6 +45,8 @@ GeneralLoglikelihood <- function(y,r,s,u,Gamma,init_density,e_it,B,model,adjacen
   
   #Model 1, 2, 4 or 5
  else if(model == 1 || model ==2 || model == 4 || model ==5){
+   init_density<- state_dist(Gamma[1, 2], Gamma[2, 1])
+   init_density<- log(init_density)
     for (i in 1:ndept) {
       alpha.1 <- init_density[1] + dpois(y[i, 1], lambda = e_it[i, 1] * exp(r[1] + s[1] + u[i]), log = TRUE)
       alpha.2 <- init_density[2] + dpois(y[i, 1], lambda = e_it[i, 1] * exp(r[1] + s[1] + u[i] + B[1] * z_it[i,1]), log = TRUE)
@@ -49,6 +67,8 @@ GeneralLoglikelihood <- function(y,r,s,u,Gamma,init_density,e_it,B,model,adjacen
   
   #Model3 or Model6
   else if(model == 3 || model == 6){
+    init_density<- state_dist(Gamma[1, 2], Gamma[2, 1])
+    init_density<- log(init_density)
       for (i in 1:ndept) {
         alpha.1 <- init_density[1] + dpois(y[i, 1], lambda = e_it[i, 1] * exp(r[1] + s[1] + u[i]), log = TRUE)
         alpha.2 <- init_density[2] + dpois(y[i, 1], lambda = e_it[i, 1] * exp(r[1] + s[1] + u[i] + B[1] * z_it[i,1] + B[2] * z_it2[i,1]), log = TRUE)
@@ -69,7 +89,8 @@ GeneralLoglikelihood <- function(y,r,s,u,Gamma,init_density,e_it,B,model,adjacen
  
   #Model 7
   else if(model == 7){
-      
+    init_density<- state_dist(Gamma[1, 2], Gamma[2, 1])
+    init_density<- log(init_density)
       for (i in 1:ndept) {
       alpha.1 <- init_density[1] + dpois(y[i, 1], lambda = e_it[i, 1] * exp(r[1] + s[1] + u[i]), log = TRUE)
       alpha.2 <- init_density[2] + dpois(y[i, 1], lambda = e_it[i, 1] * exp(r[1] + s[1] + u[i] + 1), log = TRUE)

@@ -73,12 +73,14 @@ DesignMatrixModel3<- function(y, adjacencymatrix){
     z_it2[i, 1] = 0
     for(t in 2:time){
       flag = 0
+      if(length(indexes)>0){
       for(b in 1:length(indexes)){
         neighbor_index <- indexes[b]
         if(y[neighbor_index, t-1] > 0){
           flag = 1
           break;
         }
+       }
       }
       z_it2[i, t] = flag
     }

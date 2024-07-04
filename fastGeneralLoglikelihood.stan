@@ -1,7 +1,7 @@
 functions{
   
   //Stationary distribution
-   real TPM(real G12, real G21){
+   vector TPM(real G12, real G21){
     matrix[2, 2] m;
     m[1, 1] = 1 - G12;
     m[1, 2] = G12;
@@ -21,10 +21,10 @@ functions{
    complex_vector[2] stationary_distribution = E_vectors[, index]; 
    vector[2] Nstationary_distribution = get_real(stationary_distribution);
    Nstationary_distribution /= sum(Nstationary_distribution); 
-   return(Nstationary_distribution[2]);
+   return(Nstationary_distribution);
   }
   
-array[] matrix Stanforwardfilter(array[,] int y, vector r, vector s, vector u, matrix gamma, vector init_density, matrix e_it, vector B, int Model, matrix z_it, matrix z_it2) {
+array[] matrix Stanforwardfilter(array[,] int y, vector r, vector s, vector u, matrix gamma, matrix e_it, vector B, int Model, matrix z_it, matrix z_it2) {
   
   int ndept = dims(y)[1];
   int time = dims(y)[2];
@@ -39,6 +39,7 @@ array[] matrix Stanforwardfilter(array[,] int y, vector r, vector s, vector u, m
 
   //Model1 or Model2 or Model 4 or Model 5
   if(Model == 1 || Model == 2 || Model == 4 || Model == 5){
+  vector[nstate] init_density = TPM(gamma[1, 2], gamma[2, 1]);
   
   for (i in 1:ndept) {
     
@@ -69,6 +70,7 @@ array[] matrix Stanforwardfilter(array[,] int y, vector r, vector s, vector u, m
  }
  else //Model3 or Model 6
   if(Model == 3 || Model == 6){
+    vector[nstate] init_density = TPM(gamma[1, 2], gamma[2, 1]);
   
   for (i in 1:ndept) {
     
@@ -110,7 +112,7 @@ array[] matrix Stanforwardfilter(array[,] int y, vector r, vector s, vector u, m
 }
 
 
-array[] matrix Stanbackwardsweep(array[,] int y, vector r, vector s, vector u, matrix gamma, vector init_density, matrix e_it, vector B, int Model, matrix z_it, matrix z_it2) {
+array[] matrix Stanbackwardsweep(array[,] int y, vector r, vector s, vector u, matrix gamma, matrix e_it, vector B, int Model, matrix z_it, matrix z_it2) {
   
   int ndept = dims(y)[1];
   int time = dims(y)[2];
@@ -198,16 +200,16 @@ array[] matrix Stanbackwardsweep(array[,] int y, vector r, vector s, vector u, m
 
 
 //Local decoding
-matrix StanDecoding(array[,] int y, vector r, vector s, vector u, matrix gamma, vector init_density, matrix e_it, vector B, int Model, matrix z_it, matrix z_it2) {
+matrix StanDecoding(array[,] int y, vector r, vector s, vector u, matrix gamma, matrix e_it, vector B, int Model, matrix z_it, matrix z_it2) {
   int ndept = dims(y)[1];
   int time = dims(y)[2]; 
   int nstate = rows(gamma);
 
 if(Model == 1 || Model == 2 || Model == 3 || Model == 4 || Model == 5 || Model == 6){
   array[ndept] matrix[time, nstate] Allforwardprobs;
-  Allforwardprobs = Stanforwardfilter(y, r, s, u, gamma, init_density, e_it, B, Model, z_it, z_it2);
+  Allforwardprobs = Stanforwardfilter(y, r, s, u, gamma, e_it, B, Model, z_it, z_it2);
   array[ndept] matrix[time, nstate] Allbackwardprobs;
-  Allbackwardprobs = Stanbackwardsweep(y, r, s, u, gamma, init_density, e_it, B, Model, z_it, z_it2);
+  Allbackwardprobs = Stanbackwardsweep(y, r, s, u, gamma, e_it, B, Model, z_it, z_it2);
   matrix[ndept, time] Res;
   real P1;
   real P2;
@@ -274,7 +276,7 @@ if(Model == 1 || Model == 2 || Model == 3 || Model == 4 || Model == 5 || Model =
 
   //loglikelihood via forward filtering
 
-  real Stan_Loglikelihood(array[,] int y, vector r, vector s, vector u, matrix gamma, vector init_density, matrix e_it, vector B, int Model, matrix z_it, matrix z_it2) {
+  real Stan_Loglikelihood(array[,] int y, vector r, vector s, vector u, matrix gamma, matrix e_it, vector B, int Model, matrix z_it, matrix z_it2) {
 
   int ndept = dims(y)[1];
   int time = dims(y)[2];
@@ -301,6 +303,7 @@ if(Model == 1 || Model == 2 || Model == 3 || Model == 4 || Model == 5 || Model =
   
  //Model1 or Model2 or Model 4 or Model 5
   else if(Model == 1 || Model == 2 || Model == 4 || Model == 5){
+    vector[nstate] init_density = TPM(gamma[1, 2], gamma[2, 1]);
  
   for (i in 1:ndept) {
   
@@ -342,7 +345,7 @@ if(Model == 1 || Model == 2 || Model == 3 || Model == 4 || Model == 5 || Model =
   
   //Model3 or Model 6
   else if(Model == 3 || Model == 6){
-      
+      vector[nstate] init_density = TPM(gamma[1, 2], gamma[2, 1]);
   for (i in 1:ndept) {
   
   // Initialization of the first time step for each department
@@ -383,6 +386,7 @@ if(Model == 1 || Model == 2 || Model == 3 || Model == 4 || Model == 5 || Model =
   //Model7: z*B is fixed to 1 in hyperendemic state
 
   else if(Model == 7){
+    vector[nstate] init_density = TPM(gamma[1, 2], gamma[2, 1]);
   for (i in 1:ndept) {
   
   // Initialization of the first time step for each department
@@ -432,7 +436,7 @@ data {
  // vector[time] r;                  // Trend component
  // vector[time] s;                  // Seasonal component
   //vector[ndept] u;                 // Spatial component  
-  simplex[nstate] init_density;       // initial distribution of the Markov chain
+ // simplex[nstate] init_density;       // initial distribution of the Markov chain
   matrix[ndept, time] e_it;           // initial Susceptibles
   matrix[ndept, ndept] R;             // Structure / Precision matrix (IGMRF1/IGMRF2)
   int<lower=0, upper=7> Model;        // Model's functional form
@@ -467,18 +471,27 @@ model {
   kappa_r ~ gamma(1, 0.0001);  
   kappa_s ~ gamma(1, 0.0001);
   
+  if(Model==1 || Model==2 || Model==4 || Model==5){
+    B[1] ~ exponential(1);
+  }
+  
+  if(Model==3 || Model==6){
+    B[1] ~ exponential(1);
+    B[2] ~ exponential(1);
+  }
+  
   uconstrained ~ IGMRF1(kappa_u, R);
   r ~ randomwalk2(kappa_r);
   s ~ seasonalComp(kappa_s);
   
   // Likelihood
-  target += Stan_Loglikelihood(y, r, s, uconstrained, G(G12, G21), init_density, e_it, B, Model, z_it, z_it2);
+  target += Stan_Loglikelihood(y, r, s, uconstrained, G(G12, G21), e_it, B, Model, z_it, z_it2);
 }
 
 generated quantities{
-  real log_lik = Stan_Loglikelihood(y, r, s, uconstrained, G(G12, G21), init_density, e_it, B, Model, z_it, z_it2);
+  real log_lik = Stan_Loglikelihood(y, r, s, uconstrained, G(G12, G21), e_it, B, Model, z_it, z_it2);
  
-  real state1_stationary_dist = TPM(G12, G21); 
+  real state1_stationary_dist = TPM(G12, G21)[2]; 
 
   matrix[ndept, time] lambda_it;
 
@@ -490,7 +503,7 @@ for(i in 1:ndept){
  }  
 }
 else if(Model == 1 || Model == 2 || Model == 4 || Model == 5){
-  matrix[ndept, time] x_it = StanDecoding(y, r, s, uconstrained, G(G12, G21), init_density, e_it, B, Model, z_it, z_it2);
+  matrix[ndept, time] x_it = StanDecoding(y, r, s, uconstrained, G(G12, G21), e_it, B, Model, z_it, z_it2);
 
 for(i in 1:ndept){
   for(t in 1:time){
@@ -499,7 +512,7 @@ for(i in 1:ndept){
  }
 } 
 else if(Model == 3 || Model == 6){
-  matrix[ndept, time] x_it = StanDecoding(y, r, s, uconstrained, G(G12, G21), init_density, e_it, B, Model, z_it, z_it2);
+  matrix[ndept, time] x_it = StanDecoding(y, r, s, uconstrained, G(G12, G21), e_it, B, Model, z_it, z_it2);
 
 for(i in 1:ndept){
   for(t in 1:time){

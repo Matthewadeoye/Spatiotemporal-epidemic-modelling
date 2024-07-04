@@ -29,39 +29,55 @@ logIGMRF1<- function(x, y, z) {
 }
 
 newlogLikelihood<- function(y, e_it, Model, z_it, z_it2, theta){
-  Gamma<- abs(theta[1:2])
-  if(Gamma[1]>1)Gamma[1] = 2 - Gamma[1]
-  if(Gamma[2]>1)Gamma[2] = 2 - Gamma[2]
-  G_mat<- matrix(c(1-Gamma[1], Gamma[1], Gamma[2], 1-Gamma[2]), nrow = length(Gamma), byrow = T)
-  r<- theta[5+(1:time)]
-  s<- theta[5+((time+1):(2*time))]
-  u<- theta[5+(((2*time)+1):((2*time)+ndept))]
-  
-  if(length(theta) > 5+time+time+ndept){
+  if(Model==0){
+    Gamma<- c(0.5, 0.5)
+    G_mat<- matrix(c(1-Gamma[1], Gamma[1], Gamma[2], 1-Gamma[2]), nrow = length(Gamma), byrow = T)
+    r<- theta[3+(1:time)]
+    s<- theta[3+((time+1):(2*time))]
+    u<- theta[3+(((2*time)+1):((2*time)+ndept))]
+    ARcoeff<- c(0, 0)
+  }else{
+    Gamma<- theta[1:2] 
+    G_mat<- matrix(c(1-Gamma[1], Gamma[1], Gamma[2], 1-Gamma[2]), nrow = length(Gamma), byrow = T)
+    r<- theta[5+(1:time)]
+    s<- theta[5+((time+1):(2*time))]
+    u<- theta[5+(((2*time)+1):((2*time)+ndept))]
     ARcoeff<- theta[(5+time+time+ndept+1):length(theta)]
-  }else{ARcoeff= NA}
+  }
   
-  ll<- GeneralLoglikelihood(y, r, s, u, G_mat, e_it, ARcoeff, Model,z_it, z_it2)
+  ll<- GeneralLoglikelihood_cpp(y=y, r=r, s=s, u=u, G_mat, e_it, B = ARcoeff, model = Model, z_it, z_it2)
+  return(ll)
 }
 
-logPriors<- function(theta, R){
-  Gamma<- abs(theta[1:2])
-  kappaR<- abs(theta[3])
-  kappaS<- abs(theta[4])
-  kappaU<- abs(theta[5])
-  r<- theta[5+(1:time)]
-  s<- theta[5+((time+1):(2*time))]
-  u<- theta[5+(((2*time)+1):((2*time)+ndept))]
-  
-  if(length(theta) > 5+time+time+ndept){
-    ARcoeff<- theta[(5+time+time+ndept+1):length(theta)]
-  }else{ARcoeff<- c(0, 0)}
-  
-  lp<- sum(dbeta(Gamma, shape1 = c(2, 2), shape2 = c(2, 2), log = TRUE)) +
-       sum(dgamma(c(kappaR, kappaS), shape = 1, rate = c(0.0001, 0.0001), log = TRUE)) +
-       dgamma(kappaU, shape = 1, rate = 0.01, log = TRUE) +
-       randomwalk2(r, kappaR) +
-       seasonalComp(s, kappaS) +
-       logIGMRF1(u, kappaU, R)
-      # sum(dexp(ARcoeff, rate = rep(1, length(B)), log = TRUE)) 
+logPriors<- function(theta, R, Model){
+  if(Model==0){
+    kappaR<- theta[1]
+    kappaS<- theta[2]
+    kappaU<- theta[3]
+    r<- theta[3+(1:time)]
+    s<- theta[3+((time+1):(2*time))]
+    u<- theta[3+(((2*time)+1):((2*time)+ndept))]
+    lp<- sum(dgamma(c(kappaR, kappaS), shape = 1, rate = c(0.0001, 0.0001), log = TRUE)) +
+         dgamma(kappaU, shape = 1, rate = 0.01, log = TRUE) +
+         randomwalk2(r, kappaR) +
+         seasonalComp(s, kappaS) +
+         logIGMRF1(u, kappaU, R)
+  }else{
+    Gamma<- theta[1:2]
+    kappaR<- theta[3]
+    kappaS<- theta[4]
+    kappaU<- theta[5]
+    r<- theta[5+(1:time)]
+    s<- theta[5+((time+1):(2*time))]
+    u<- theta[5+(((2*time)+1):((2*time)+ndept))]
+    ARcoeff<- theta[(5+time+time+ndept+1):length(theta)] 
+    lp<- sum(dbeta(Gamma, shape1 = c(2, 2), shape2 = c(2, 2), log = TRUE)) +
+         sum(dgamma(c(kappaR, kappaS), shape = 1, rate = c(0.0001, 0.0001), log = TRUE)) +
+         dgamma(kappaU, shape = 1, rate = 0.01, log = TRUE) +
+         randomwalk2(r, kappaR) +
+         seasonalComp(s, kappaS) +
+         logIGMRF1(u, kappaU, R) + 
+         sum(dexp(ARcoeff, rate = rep(1, length(ARcoeff)), log = TRUE))
+    }
+  return(lp)
 }
